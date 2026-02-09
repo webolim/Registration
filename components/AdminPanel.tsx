@@ -190,6 +190,12 @@ export const AdminPanel: React.FC = () => {
     return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   };
 
+  const formatMobileDate = (dateStr: string) => {
+    const raw = dateStr.split('(')[0].trim();
+    const date = new Date(raw);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
   // Section Definitions
   const SECTIONS = [
     { 
@@ -312,15 +318,15 @@ export const AdminPanel: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+      <main className="flex-1 p-2 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
         
         {/* DASHBOARD TAB (Default View) */}
         {activeTab === 'dashboard' && (
            <div className="animate-in fade-in slide-in-from-left-2 duration-300 space-y-6">
               
               {/* Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                 <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center space-x-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                 <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center space-x-4">
                     <div className="p-3 bg-blue-50 text-blue-600 rounded-lg"><Users className="w-6 h-6"/></div>
                     <div>
                        <p className="text-sm font-medium text-gray-500">Total Participants</p>
@@ -328,7 +334,7 @@ export const AdminPanel: React.FC = () => {
                        <p className="text-xs text-gray-400">{totalRegistrationsCount} registrations</p>
                     </div>
                  </div>
-                 <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center space-x-4">
+                 <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center space-x-4">
                     <div className="p-3 bg-green-50 text-green-600 rounded-lg"><FileBarChart className="w-6 h-6"/></div>
                     <div>
                        <p className="text-sm font-medium text-gray-500">Accommodation Requests</p>
@@ -338,7 +344,7 @@ export const AdminPanel: React.FC = () => {
                        <p className="text-xs text-gray-400">Total Groups</p>
                     </div>
                  </div>
-                 <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center space-x-4">
+                 <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center space-x-4">
                     <div className="p-3 bg-orange-50 text-orange-600 rounded-lg"><Utensils className="w-6 h-6"/></div>
                     <div>
                        <p className="text-sm font-medium text-gray-500">Total Food Packets</p>
@@ -350,31 +356,48 @@ export const AdminPanel: React.FC = () => {
 
               {/* Main Report Table */}
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                  <h3 className="font-bold text-gray-800">11-Day Event Overview</h3>
+                <div className="px-4 py-3 md:px-6 md:py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                  <h3 className="font-bold text-gray-800 text-sm md:text-base">11-Day Event Overview</h3>
                   <span className="text-xs font-medium text-gray-500">Live Data</span>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm border-collapse">
-                    <thead className="bg-gray-800 text-white text-xs uppercase tracking-wider">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-gray-800 text-white uppercase tracking-wider">
                       <tr>
                         {/* Sticky Date Column Header */}
-                        <th className="p-4 min-w-[160px] font-bold border-r border-gray-700 sticky left-0 z-20 bg-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]">Event Date</th>
+                        <th className="p-2 md:p-4 text-[10px] md:text-xs font-bold border-r border-gray-700 sticky left-0 z-20 bg-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)] w-16 md:w-auto md:min-w-[160px]">
+                           <span className="md:hidden">Date</span>
+                           <span className="hidden md:inline">Event Date</span>
+                        </th>
                         
-                        <th className="p-4 w-24 text-center border-r border-gray-700 min-w-[100px]">Forms</th>
-                        <th className="p-4 text-center border-r border-gray-700 bg-blue-900/40 min-w-[200px]" style={{ width: '25%' }}>Attendance</th>
-                        <th className="p-4 text-center border-r border-gray-700 bg-green-900/40 min-w-[200px]" style={{ width: '25%' }}>Accommodation</th>
-                        <th className="p-4 text-center bg-orange-900/40 min-w-[100px]" style={{ width: '25%' }}>Food</th>
+                        <th className="p-2 md:p-4 text-[10px] md:text-xs text-center border-r border-gray-700 w-12 md:w-24 md:min-w-[100px]">
+                           <span className="md:hidden">Reg</span>
+                           <span className="hidden md:inline">Forms</span>
+                        </th>
+                        <th className="p-2 md:p-4 text-[10px] md:text-xs text-center border-r border-gray-700 bg-blue-900/40 w-16 md:w-auto md:min-w-[200px]" style={{ width: '25%' }}>
+                           <span className="md:hidden">Attn</span>
+                           <span className="hidden md:inline">Attendance</span>
+                        </th>
+                        <th className="p-2 md:p-4 text-[10px] md:text-xs text-center border-r border-gray-700 bg-green-900/40 w-16 md:w-auto md:min-w-[200px]" style={{ width: '25%' }}>
+                           <span className="md:hidden">Stay</span>
+                           <span className="hidden md:inline">Accommodation</span>
+                        </th>
+                        <th className="p-2 md:p-4 text-[10px] md:text-xs text-center bg-orange-900/40 w-14 md:w-auto md:min-w-[100px]" style={{ width: '25%' }}>
+                           <span className="md:hidden">Food</span>
+                           <span className="hidden md:inline">Food</span>
+                        </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-gray-100 text-xs md:text-sm">
                       {SECTIONS.map(section => (
                         <React.Fragment key={section.id}>
                           {/* Section Header */}
                           <tr className={`${section.color} border-y`}>
-                             <td colSpan={5} className="p-3 pl-4 text-xs font-bold uppercase tracking-widest">
+                             <td colSpan={5} className="p-2 md:p-3 pl-2 md:pl-4 text-[10px] md:text-xs font-bold uppercase tracking-widest">
                                 <div className="sticky left-0 flex items-center">
-                                  <Calendar className="w-3 h-3 mr-2 opacity-70" /> {section.title}
+                                  <Calendar className="w-3 h-3 mr-1 md:mr-2 opacity-70" /> 
+                                  <span className="md:hidden">{section.title.replace('Days', '')}</span>
+                                  <span className="hidden md:inline">{section.title}</span>
                                 </div>
                              </td>
                           </tr>
@@ -386,28 +409,29 @@ export const AdminPanel: React.FC = () => {
                              return (
                                 <tr key={row.date} className="hover:bg-gray-50 transition border-b border-gray-100 group">
                                    {/* Sticky Date Cell */}
-                                   <td className="p-4 text-sm font-bold text-gray-700 border-r border-gray-100 sticky left-0 z-10 bg-white group-hover:bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                                      {formatAdminDate(row.originalDate)}
+                                   <td className="p-2 md:p-4 font-bold text-gray-700 border-r border-gray-100 sticky left-0 z-10 bg-white group-hover:bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                                      <span className="md:hidden whitespace-nowrap">{formatMobileDate(row.originalDate)}</span>
+                                      <span className="hidden md:inline">{formatAdminDate(row.originalDate)}</span>
                                    </td>
                                    
                                    {/* Forms */}
-                                   <td className="p-4 text-center border-r border-gray-100">
-                                      <span className="inline-block px-2.5 py-1 bg-gray-100 rounded-md text-xs font-bold text-gray-600">
+                                   <td className="p-2 md:p-4 text-center border-r border-gray-100">
+                                      <span className="inline-block px-2 py-0.5 md:px-2.5 md:py-1 bg-gray-100 rounded-md font-bold text-gray-600">
                                          {row.registrationsCount}
                                       </span>
                                    </td>
 
                                    {/* Attendance */}
-                                   <td className="p-4 text-center bg-blue-50/20 border-r border-gray-100">
+                                   <td className="p-2 md:p-4 text-center bg-blue-50/20 border-r border-gray-100">
                                       <div className="flex flex-col items-center justify-center">
-                                         <span className="text-2xl font-bold text-blue-700">{row.participants.total}</span>
+                                         <span className="text-sm md:text-2xl font-bold text-blue-700">{row.participants.total}</span>
                                          {row.participants.total > 0 && (
-                                            <div className="flex gap-3 text-[10px] font-medium text-gray-400 mt-1 uppercase tracking-wide">
+                                            <div className="flex flex-col md:flex-row gap-0.5 md:gap-3 text-[9px] md:text-[10px] font-medium text-gray-400 mt-1 uppercase tracking-wide">
                                                <span className="flex items-center" title="Male Participants">
-                                                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mr-1"></span>M: {row.participants.male}
+                                                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mr-1 hidden md:block"></span>M:{row.participants.male}
                                                </span>
                                                <span className="flex items-center" title="Female Participants">
-                                                  <span className="w-1.5 h-1.5 rounded-full bg-pink-400 mr-1"></span>F: {row.participants.female}
+                                                  <span className="w-1.5 h-1.5 rounded-full bg-pink-400 mr-1 hidden md:block"></span>F:{row.participants.female}
                                                </span>
                                             </div>
                                          )}
@@ -415,16 +439,16 @@ export const AdminPanel: React.FC = () => {
                                    </td>
                                    
                                    {/* Accommodation */}
-                                   <td className="p-4 text-center bg-green-50/20 border-r border-gray-100">
+                                   <td className="p-2 md:p-4 text-center bg-green-50/20 border-r border-gray-100">
                                       <div className="flex flex-col items-center justify-center">
-                                         <span className="text-2xl font-bold text-green-700">{row.accommodation.total}</span>
+                                         <span className="text-sm md:text-2xl font-bold text-green-700">{row.accommodation.total}</span>
                                          {row.accommodation.total > 0 && (
-                                            <div className="flex gap-3 text-[10px] font-medium text-gray-400 mt-1 uppercase tracking-wide">
+                                            <div className="flex flex-col md:flex-row gap-0.5 md:gap-3 text-[9px] md:text-[10px] font-medium text-gray-400 mt-1 uppercase tracking-wide">
                                                <span className="flex items-center" title="Male Accommodation">
-                                                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1"></span>M: {row.accommodation.male}
+                                                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1 hidden md:block"></span>M:{row.accommodation.male}
                                                </span>
                                                <span className="flex items-center" title="Female Accommodation">
-                                                  <span className="w-1.5 h-1.5 rounded-full bg-pink-400 mr-1"></span>F: {row.accommodation.female}
+                                                  <span className="w-1.5 h-1.5 rounded-full bg-pink-400 mr-1 hidden md:block"></span>F:{row.accommodation.female}
                                                </span>
                                             </div>
                                          )}
@@ -432,10 +456,10 @@ export const AdminPanel: React.FC = () => {
                                    </td>
                                    
                                    {/* Food */}
-                                   <td className="p-4 text-center bg-orange-50/20">
+                                   <td className="p-2 md:p-4 text-center bg-orange-50/20">
                                       <div className="flex flex-col items-center justify-center">
-                                        <span className="text-2xl font-bold text-orange-700">{row.foodPackets}</span>
-                                        <span className="text-[10px] text-orange-400 mt-1 font-semibold uppercase">Packets</span>
+                                        <span className="text-sm md:text-2xl font-bold text-orange-700">{row.foodPackets}</span>
+                                        <span className="hidden md:inline text-[10px] text-orange-400 mt-1 font-semibold uppercase">Packets</span>
                                       </div>
                                    </td>
                                 </tr>
@@ -455,12 +479,12 @@ export const AdminPanel: React.FC = () => {
           <div className="animate-in fade-in slide-in-from-right-2 duration-300 space-y-6">
              
              {/* Controls */}
-             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+             <div className="bg-white p-3 md:p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-3 md:gap-4">
                 <div className="flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 focus-within:ring-2 focus-within:ring-orange-100 w-full md:w-96">
-                  <Search className="w-5 h-5 text-gray-400 mr-3" />
+                  <Search className="w-4 h-4 md:w-5 md:h-5 text-gray-400 mr-2 md:mr-3" />
                   <input 
                     type="text" 
-                    placeholder="Search by name, mobile or city..." 
+                    placeholder="Search..." 
                     className="bg-transparent border-none outline-none flex-grow text-gray-700 text-sm placeholder-gray-400"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -471,7 +495,7 @@ export const AdminPanel: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3 w-full md:w-auto">
-                  <button onClick={downloadCSV} className="flex-1 md:flex-none flex items-center justify-center px-4 py-2 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg text-sm font-medium transition text-gray-700 shadow-sm">
+                  <button onClick={downloadCSV} className="flex-1 md:flex-none flex items-center justify-center px-4 py-2 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg text-xs md:text-sm font-medium transition text-gray-700 shadow-sm">
                     <Download className="w-4 h-4 mr-2" /> Export CSV
                   </button>
                 </div>
@@ -480,44 +504,48 @@ export const AdminPanel: React.FC = () => {
             {/* List Table */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-gray-600 border-collapse">
-                  <thead className="bg-gray-50 text-gray-900 font-bold uppercase text-xs">
+                <table className="w-full text-left text-xs md:text-sm text-gray-600 border-collapse">
+                  <thead className="bg-gray-50 text-gray-900 font-bold uppercase text-[10px] md:text-xs">
                     <tr>
                       {/* Sticky Participant Column Header */}
-                      <th className="p-4 border-b border-gray-200 sticky left-0 z-20 bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[200px]">Participant</th>
+                      <th className="p-2 md:p-4 border-b border-gray-200 sticky left-0 z-20 bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] w-32 md:w-auto md:min-w-[200px]">Participant</th>
                       
-                      <th className="p-4 border-b border-gray-200 min-w-[150px]">Attendance</th>
-                      <th className="p-4 border-b border-gray-200 min-w-[150px]">Guests</th>
-                      <th className="p-4 border-b border-gray-200 min-w-[150px]">Stay</th>
-                      <th className="p-4 border-b border-gray-200 min-w-[150px]">Food</th>
-                      {isAuthenticated && <th className="p-4 border-b border-gray-200 text-right min-w-[100px]">Actions</th>}
+                      <th className="p-2 md:p-4 border-b border-gray-200 md:min-w-[150px]">Attendance</th>
+                      <th className="p-2 md:p-4 border-b border-gray-200 md:min-w-[150px]">Guests</th>
+                      <th className="p-2 md:p-4 border-b border-gray-200 md:min-w-[150px]">Stay</th>
+                      <th className="p-2 md:p-4 border-b border-gray-200 md:min-w-[150px]">Food</th>
+                      {isAuthenticated && <th className="p-2 md:p-4 border-b border-gray-200 text-right md:min-w-[100px]"></th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {filteredRegistrations.map((reg) => (
                       <tr key={reg.id} className="hover:bg-gray-50 transition group">
                         {/* Sticky Participant Cell */}
-                        <td className="p-4 align-top sticky left-0 z-10 bg-white group-hover:bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] border-r border-gray-100">
-                          <div className="font-bold text-gray-900">{reg.primaryParticipant.fullName}</div>
-                          <div className="text-orange-600 font-medium">{reg.primaryParticipant.mobile}</div>
-                          <div className="text-gray-400 text-xs">{reg.primaryParticipant.city}</div>
-                          <div className="text-gray-400 text-xs mt-1">{reg.primaryParticipant.gender}, {reg.primaryParticipant.age}y</div>
+                        <td className="p-2 md:p-4 align-top sticky left-0 z-10 bg-white group-hover:bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] border-r border-gray-100">
+                          <div className="font-bold text-gray-900 truncate max-w-[120px] md:max-w-none">{reg.primaryParticipant.fullName}</div>
+                          <div className="text-orange-600 font-medium text-[10px] md:text-sm">{reg.primaryParticipant.mobile}</div>
+                          <div className="text-gray-400 text-[9px] md:text-xs md:block hidden">{reg.primaryParticipant.city}</div>
+                          <div className="text-gray-400 text-[9px] md:text-xs mt-0.5 md:mt-1">{reg.primaryParticipant.gender.charAt(0)}, {reg.primaryParticipant.age}y</div>
                         </td>
                         
-                        <td className="p-4 align-top">
-                          <div className="flex flex-wrap gap-1 max-w-[200px]">
-                            {reg.attendingDates.map(d => (
-                              <span key={d} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] rounded border border-blue-100 whitespace-nowrap">
-                                {d.split('(')[0].trim().split(',')[0].replace('March ', 'Mar ').replace('April ', 'Apr ')}
-                              </span>
-                            ))}
+                        <td className="p-2 md:p-4 align-top">
+                          <div className="flex flex-wrap gap-1 max-w-[100px] md:max-w-[200px]">
+                            {reg.attendingDates.length > 5 ? (
+                               <span className="text-[10px] md:text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-1 rounded">{reg.attendingDates.length} Days</span>
+                            ) : (
+                                reg.attendingDates.map(d => (
+                                  <span key={d} className="px-1.5 py-0.5 md:px-2 md:py-0.5 bg-blue-50 text-blue-700 text-[9px] md:text-[10px] rounded border border-blue-100 whitespace-nowrap">
+                                    {d.split('(')[0].trim().split(',')[0].replace('March ', 'Mar ').replace('April ', 'Apr ')}
+                                  </span>
+                                ))
+                            )}
                           </div>
                         </td>
-                        <td className="p-4 align-top">
+                        <td className="p-2 md:p-4 align-top">
                           {reg.additionalGuests.length > 0 ? (
                             <div>
-                              <span className="font-bold text-gray-900">{reg.additionalGuests.length} Guests</span>
-                              <ul className="text-xs text-gray-500 mt-1 list-disc list-inside">
+                              <span className="font-bold text-gray-900 block text-[10px] md:text-sm">{reg.additionalGuests.length} Guests</span>
+                              <ul className="text-[9px] md:text-xs text-gray-500 mt-1 list-disc list-inside hidden md:block">
                                 {reg.additionalGuests.map(g => (
                                   <li key={g.id} className="truncate max-w-[150px]">{g.fullName}</li>
                                 ))}
@@ -527,36 +555,33 @@ export const AdminPanel: React.FC = () => {
                             <span className="text-gray-300">-</span>
                           )}
                         </td>
-                        <td className="p-4 align-top">
+                        <td className="p-2 md:p-4 align-top">
                           {reg.accommodation.required ? (
                             <div>
-                              <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs font-bold rounded mb-1">Yes ({reg.accommodation.memberIds.length})</span>
-                              <div className="text-xs text-gray-500 whitespace-nowrap">
+                              <span className="inline-block px-1.5 py-0.5 md:px-2 md:py-1 bg-green-100 text-green-800 text-[9px] md:text-xs font-bold rounded mb-1 whitespace-nowrap">Yes ({reg.accommodation.memberIds.length})</span>
+                              <div className="text-[9px] md:text-xs text-gray-500 whitespace-nowrap hidden md:block">
                                 <span className="text-gray-400">In:</span> {reg.accommodation.arrivalDate.split('-').slice(1).join('/')}<br/>
                                 <span className="text-gray-400">Out:</span> {reg.accommodation.departureDate.split('-').slice(1).join('/')}
                               </div>
                             </div>
-                          ) : <span className="text-gray-300">No</span>}
+                          ) : <span className="text-gray-300 text-[10px] md:text-sm">No</span>}
                         </td>
-                        <td className="p-4 align-top">
+                        <td className="p-2 md:p-4 align-top">
                           {reg.food.takeawayRequired ? (
                             <div>
-                              <span className="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded mb-1">Yes ({reg.food.packetCount})</span>
-                              <div className="text-xs text-gray-500">
-                                 {reg.food.pickupDate.split('-').slice(1).join('/')}
-                              </div>
+                              <span className="inline-block px-1.5 py-0.5 md:px-2 md:py-1 bg-yellow-100 text-yellow-800 text-[9px] md:text-xs font-bold rounded mb-1 whitespace-nowrap">Yes ({reg.food.packetCount})</span>
                             </div>
-                          ) : <span className="text-gray-300">No</span>}
+                          ) : <span className="text-gray-300 text-[10px] md:text-sm">No</span>}
                         </td>
                         
                         {isAuthenticated && (
-                          <td className="p-4 align-top text-right">
+                          <td className="p-2 md:p-4 align-top text-right">
                             <button 
                               onClick={() => handleDelete(reg.primaryParticipant.mobile)}
-                              className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition opacity-0 group-hover:opacity-100"
+                              className="p-1 md:p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                               title="Delete Registration"
                             >
-                              <Trash2 className="w-5 h-5" />
+                              <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
                             </button>
                           </td>
                         )}
@@ -564,11 +589,10 @@ export const AdminPanel: React.FC = () => {
                     ))}
                     {filteredRegistrations.length === 0 && (
                       <tr>
-                        <td colSpan={isAuthenticated ? 6 : 5} className="p-12 text-center">
+                        <td colSpan={isAuthenticated ? 6 : 5} className="p-8 md:p-12 text-center">
                            <div className="flex flex-col items-center justify-center text-gray-400">
-                              <Search className="w-10 h-10 mb-3 opacity-20"/>
-                              <p className="text-lg font-medium text-gray-500">No registrations found</p>
-                              <p className="text-sm">Try adjusting your search terms</p>
+                              <Search className="w-8 h-8 md:w-10 md:h-10 mb-3 opacity-20"/>
+                              <p className="text-base md:text-lg font-medium text-gray-500">No registrations found</p>
                            </div>
                         </td>
                       </tr>
