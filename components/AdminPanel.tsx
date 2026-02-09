@@ -14,7 +14,7 @@ export const AdminPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'registrations'>('dashboard');
 
   // Simple hardcoded password for demonstration
-  const ADMIN_PASSWORD = "sri-ram-admin"; 
+  const ADMIN_PASSWORD = "sri-rama-admin"; 
 
   useEffect(() => {
     fetchData();
