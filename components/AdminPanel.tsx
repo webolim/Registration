@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { RegistrationData } from '../types';
-import { Loader2, Trash2, Download, Search, RefreshCw, X, Lock, Unlock, ShieldCheck } from 'lucide-react';
+import { EVENT_DATES } from '../constants';
+import { Loader2, Trash2, Download, Search, RefreshCw, X, Lock, Unlock, ShieldCheck, BarChart3, Users, FileBarChart, Utensils } from 'lucide-react';
 
 export const AdminPanel: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -10,6 +11,7 @@ export const AdminPanel: React.FC = () => {
   const [registrations, setRegistrations] = useState<RegistrationData[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'registrations'>('dashboard');
 
   // Simple hardcoded password for demonstration
   const ADMIN_PASSWORD = "sri-ram-admin"; 
@@ -25,7 +27,6 @@ export const AdminPanel: React.FC = () => {
       setRegistrations(data);
     } catch (err) {
       console.error(err);
-      // Fail silently for view-only users or show a toast in a real app
     } finally {
       setLoading(false);
     }
@@ -91,15 +92,95 @@ export const AdminPanel: React.FC = () => {
     link.click();
   };
 
+  const processDashboardStats = () => {
+    // Initialize stats structure for each event date
+    const stats: Record<string, any> = {};
+    EVENT_DATES.forEach(d => {
+       stats[d] = {
+         date: d.split('(')[0].trim(),
+         registration: { male: 0, female: 0, total: 0 },
+         accommodation: { male: 0, female: 0, total: 0 },
+         foodPackets: 0
+       };
+    });
+
+    registrations.forEach(reg => {
+       // Combine primary and guests
+       const allParticipants = [reg.primaryParticipant, ...reg.additionalGuests];
+
+       // 1. Attendance Stats
+       reg.attendingDates.forEach(date => {
+         if (stats[date]) {
+            allParticipants.forEach(p => {
+               const gender = (p.gender === 'Male' || p.gender === 'Female') ? p.gender.toLowerCase() : 'male'; // fallback to male for 'other' or handle distinct
+               stats[date].registration[gender]++;
+               stats[date].registration.total++;
+            });
+         }
+       });
+
+       // 2. Accommodation Stats
+       if (reg.accommodation.required && reg.accommodation.arrivalDate && reg.accommodation.departureDate) {
+         const checkIn = new Date(reg.accommodation.arrivalDate);
+         const checkOut = new Date(reg.accommodation.departureDate);
+         checkIn.setHours(0,0,0,0);
+         checkOut.setHours(0,0,0,0);
+
+         const accommodatedMembers = allParticipants.filter(p => reg.accommodation.memberIds.includes(p.id));
+
+         EVENT_DATES.forEach(date => {
+            const current = new Date(date.split('(')[0].trim());
+            current.setHours(0,0,0,0);
+            
+            // Logic: Count accommodation if the current date is part of their stay.
+            // Typically "staying for the night of X" means CheckIn <= X < CheckOut
+            if (current >= checkIn && current < checkOut) {
+               accommodatedMembers.forEach(p => {
+                  const gender = (p.gender === 'Male' || p.gender === 'Female') ? p.gender.toLowerCase() : 'male';
+                  stats[date].accommodation[gender]++;
+                  stats[date].accommodation.total++;
+               });
+            }
+         });
+       }
+
+       // 3. Food Stats
+       if (reg.food.takeawayRequired && reg.food.pickupDate) {
+          const pickupDate = new Date(reg.food.pickupDate);
+          pickupDate.setHours(0,0,0,0);
+
+          EVENT_DATES.forEach(date => {
+             const current = new Date(date.split('(')[0].trim());
+             current.setHours(0,0,0,0);
+             if (current.getTime() === pickupDate.getTime()) {
+                stats[date].foodPackets += (reg.food.packetCount || 0);
+             }
+          });
+       }
+    });
+
+    return Object.values(stats);
+  };
+
   const filteredRegistrations = registrations.filter(reg => 
     reg.primaryParticipant.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     reg.primaryParticipant.mobile.includes(searchTerm) ||
     reg.primaryParticipant.city.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const dashboardStats = processDashboardStats();
+  
+  // Totals for Summary Cards
+  const totalRegistrationsCount = registrations.length;
+  const totalGuestsCount = registrations.reduce((acc, r) => acc + r.additionalGuests.length, 0);
+  const totalParticipants = totalRegistrationsCount + totalGuestsCount;
+  const totalFoodRequestCount = registrations.reduce((acc, r) => acc + (r.food.takeawayRequired ? r.food.packetCount : 0), 0);
+
   return (
-    <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden min-h-screen relative">
-      
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
+      {/* Decorative Top Bar */}
+      <div className="h-1.5 bg-gradient-to-r from-orange-400 via-orange-600 to-orange-800"></div>
+
       {/* Login Modal Overlay */}
       {showLoginModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
@@ -132,157 +213,277 @@ export const AdminPanel: React.FC = () => {
       )}
 
       {/* Header */}
-      <div className="bg-gray-900 text-white px-6 py-4 flex flex-col md:flex-row justify-between items-center sticky top-0 z-20 gap-4 shadow-md">
-        <div>
-          <h2 className="text-xl font-bold flex items-center">
-             Admin Dashboard
-             {!isAuthenticated && <span className="ml-3 px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded border border-gray-600">View Only</span>}
-             {isAuthenticated && <span className="ml-3 px-2 py-0.5 bg-green-900 text-green-300 text-xs rounded border border-green-700 flex items-center"><ShieldCheck className="w-3 h-3 mr-1"/> Admin Mode</span>}
-          </h2>
-          <p className="text-gray-400 text-xs mt-0.5">Manage Registrations Sri Ramayana Satram</p>
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-3">
+               <div className="bg-orange-100 p-2 rounded-lg text-orange-700">
+                 <ShieldCheck className="w-6 h-6" />
+               </div>
+               <div>
+                 <h1 className="text-xl font-bold text-gray-900 tracking-tight leading-none">Admin Portal</h1>
+                 <p className="text-xs text-gray-500 mt-0.5 font-medium">Sri Ramayana Satram 2026</p>
+               </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+               <button 
+                 onClick={fetchData} 
+                 className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition" 
+                 title="Refresh Data"
+               >
+                 <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+               </button>
+               
+               {isAuthenticated ? (
+                 <button 
+                   onClick={() => setIsAuthenticated(false)} 
+                   className="flex items-center px-4 py-2 bg-red-50 text-red-600 border border-red-100 rounded-lg text-sm font-medium hover:bg-red-100 transition"
+                 >
+                   <Lock className="w-4 h-4 mr-2" /> Logout
+                 </button>
+               ) : (
+                 <button 
+                   onClick={() => setShowLoginModal(true)} 
+                   className="flex items-center px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 rounded-lg text-sm font-bold transition shadow-sm"
+                 >
+                   <Unlock className="w-4 h-4 mr-2" /> Login
+                 </button>
+               )}
+            </div>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <button onClick={fetchData} className="p-2 hover:bg-gray-800 rounded-lg transition text-gray-400 hover:text-white" title="Refresh Data">
-            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          
-          <button onClick={downloadCSV} className="flex items-center px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg text-sm font-medium transition">
-            <Download className="w-4 h-4 mr-2" /> Export CSV
-          </button>
-
-          {isAuthenticated ? (
-            <button 
-              onClick={() => setIsAuthenticated(false)} 
-              className="flex items-center px-4 py-2 bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-900/50 rounded-lg text-sm font-medium transition"
-            >
-              <Lock className="w-4 h-4 mr-2" /> Lock
-            </button>
-          ) : (
-            <button 
-              onClick={() => setShowLoginModal(true)} 
-              className="flex items-center px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-bold transition shadow-lg shadow-orange-900/20"
-            >
-              <Unlock className="w-4 h-4 mr-2" /> Login
-            </button>
-          )}
+        
+        {/* Tab Bar */}
+        <div className="border-t border-gray-100 bg-gray-50/50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-8">
+             <button 
+               onClick={() => setActiveTab('dashboard')}
+               className={`py-3 text-sm font-bold border-b-2 transition-colors flex items-center ${activeTab === 'dashboard' ? 'border-orange-600 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+             >
+               <BarChart3 className="w-4 h-4 mr-2" /> Daily Report
+             </button>
+             <button 
+               onClick={() => setActiveTab('registrations')}
+               className={`py-3 text-sm font-bold border-b-2 transition-colors flex items-center ${activeTab === 'registrations' ? 'border-orange-600 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+             >
+               <Users className="w-4 h-4 mr-2" /> Registration Details
+             </button>
+          </div>
         </div>
-      </div>
+      </header>
 
-      <div className="p-6">
-        {/* Search Bar */}
-        <div className="mb-6 flex items-center bg-gray-50 p-4 rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
-          <Search className="w-5 h-5 text-gray-400 mr-3" />
-          <input 
-            type="text" 
-            placeholder="Search by Name, Mobile or City..." 
-            className="bg-transparent border-none outline-none flex-grow text-gray-700 font-medium placeholder-gray-400"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          {searchTerm && (
-            <button onClick={() => setSearchTerm('')}><X className="w-4 h-4 text-gray-400 hover:text-gray-600 transition" /></button>
-          )}
-        </div>
-
-        <div className="text-sm text-gray-500 mb-4 flex justify-between items-center">
-          <span>Showing {filteredRegistrations.length} of {registrations.length} records</span>
-          {loading && <span className="flex items-center text-orange-600"><Loader2 className="w-3 h-3 animate-spin mr-1"/> Updating...</span>}
-        </div>
-
-        <div className="overflow-x-auto rounded-lg border border-gray-200">
-          <table className="w-full text-left text-sm text-gray-600 border-collapse">
-            <thead className="bg-gray-50 text-gray-900 font-bold uppercase text-xs">
-              <tr>
-                <th className="p-4 border-b">Participant</th>
-                <th className="p-4 border-b">Attendance</th>
-                <th className="p-4 border-b">Guests</th>
-                <th className="p-4 border-b">Stay</th>
-                <th className="p-4 border-b">Food</th>
-                {isAuthenticated && <th className="p-4 border-b text-right">Actions</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredRegistrations.map((reg) => (
-                <tr key={reg.id} className="hover:bg-gray-50 transition group">
-                  <td className="p-4 align-top">
-                    <div className="font-bold text-gray-900">{reg.primaryParticipant.fullName}</div>
-                    <div className="text-orange-600 font-medium">{reg.primaryParticipant.mobile}</div>
-                    <div className="text-gray-400 text-xs">{reg.primaryParticipant.city}</div>
-                    <div className="text-gray-400 text-xs mt-1">{reg.primaryParticipant.gender}, {reg.primaryParticipant.age}y</div>
-                  </td>
-                  <td className="p-4 align-top">
-                    <div className="flex flex-wrap gap-1">
-                      {reg.attendingDates.map(d => (
-                        <span key={d} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded border border-blue-100 whitespace-nowrap">
-                          {d.split('(')[0].trim().split(',')[0]}
-                        </span>
-                      ))}
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        
+        {/* DASHBOARD TAB (Default View) */}
+        {activeTab === 'dashboard' && (
+           <div className="animate-in fade-in slide-in-from-left-2 duration-300 space-y-6">
+              
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                 <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center space-x-4">
+                    <div className="p-3 bg-blue-50 text-blue-600 rounded-lg"><Users className="w-6 h-6"/></div>
+                    <div>
+                       <p className="text-sm font-medium text-gray-500">Total Participants</p>
+                       <h3 className="text-2xl font-bold text-gray-900">{totalParticipants}</h3>
+                       <p className="text-xs text-gray-400">{totalRegistrationsCount} registrations</p>
                     </div>
-                  </td>
-                  <td className="p-4 align-top">
-                    {reg.additionalGuests.length > 0 ? (
-                      <div>
-                        <span className="font-bold text-gray-900">{reg.additionalGuests.length} Guests</span>
-                        <ul className="text-xs text-gray-500 mt-1 list-disc list-inside">
-                          {reg.additionalGuests.map(g => (
-                            <li key={g.id}>{g.fullName}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : (
-                      <span className="text-gray-300">-</span>
-                    )}
-                  </td>
-                  <td className="p-4 align-top">
-                    {reg.accommodation.required ? (
-                      <div>
-                        <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs font-bold rounded mb-1">Yes ({reg.accommodation.memberIds.length})</span>
-                        <div className="text-xs text-gray-500">
-                          In: {reg.accommodation.arrivalDate}<br/>
-                          Out: {reg.accommodation.departureDate}
-                        </div>
-                      </div>
-                    ) : <span className="text-gray-300">No</span>}
-                  </td>
-                  <td className="p-4 align-top">
-                    {reg.food.takeawayRequired ? (
-                      <div>
-                        <span className="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded mb-1">Yes ({reg.food.packetCount})</span>
-                        <div className="text-xs text-gray-500">
-                           {reg.food.pickupDate}
-                        </div>
-                      </div>
-                    ) : <span className="text-gray-300">No</span>}
-                  </td>
-                  
-                  {isAuthenticated && (
-                    <td className="p-4 align-top text-right">
-                      <button 
-                        onClick={() => handleDelete(reg.primaryParticipant.mobile)}
-                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition opacity-0 group-hover:opacity-100"
-                        title="Delete Registration"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </td>
+                 </div>
+                 <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center space-x-4">
+                    <div className="p-3 bg-green-50 text-green-600 rounded-lg"><FileBarChart className="w-6 h-6"/></div>
+                    <div>
+                       <p className="text-sm font-medium text-gray-500">Accommodation Requests</p>
+                       <h3 className="text-2xl font-bold text-gray-900">
+                          {registrations.filter(r => r.accommodation.required).length}
+                       </h3>
+                       <p className="text-xs text-gray-400">Total Groups</p>
+                    </div>
+                 </div>
+                 <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center space-x-4">
+                    <div className="p-3 bg-orange-50 text-orange-600 rounded-lg"><Utensils className="w-6 h-6"/></div>
+                    <div>
+                       <p className="text-sm font-medium text-gray-500">Total Food Packets</p>
+                       <h3 className="text-2xl font-bold text-gray-900">{totalFoodRequestCount}</h3>
+                       <p className="text-xs text-gray-400">Takeaway Orders</p>
+                    </div>
+                 </div>
+              </div>
+
+              {/* Main Report Table */}
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                  <h3 className="font-bold text-gray-800">11-Day Event Overview</h3>
+                  <span className="text-xs font-medium text-gray-500">Live Data</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm border-collapse">
+                    <thead className="bg-gray-100 text-gray-600 text-xs uppercase tracking-wider">
+                      <tr>
+                        <th className="p-3 border-r border-gray-200 font-bold w-48">Event Date</th>
+                        <th className="p-3 border-r border-gray-200 text-center" colSpan={3}>Attendance (Persons)</th>
+                        <th className="p-3 border-r border-gray-200 text-center" colSpan={3}>Accommodation (Persons)</th>
+                        <th className="p-3 text-center">Food (Packets)</th>
+                      </tr>
+                      <tr className="bg-gray-50 border-b border-gray-200 text-gray-500">
+                        <th className="p-2 border-r border-gray-200"></th>
+                        <th className="p-2 text-center text-[10px] w-20">Male</th>
+                        <th className="p-2 text-center text-[10px] w-20">Female</th>
+                        <th className="p-2 text-center text-[10px] w-20 border-r border-gray-200 bg-gray-100 font-bold">Total</th>
+                        <th className="p-2 text-center text-[10px] w-20">Male</th>
+                        <th className="p-2 text-center text-[10px] w-20">Female</th>
+                        <th className="p-2 text-center text-[10px] w-20 border-r border-gray-200 bg-gray-100 font-bold">Total</th>
+                        <th className="p-2 text-center text-[10px]">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {dashboardStats.map((row: any) => (
+                        <tr key={row.date} className="hover:bg-gray-50 transition group">
+                           <td className="p-3 font-medium text-gray-900 border-r border-gray-100 group-hover:border-gray-200">{row.date}</td>
+                           
+                           <td className="p-3 text-center text-gray-600 bg-blue-50/10">{row.registration.male}</td>
+                           <td className="p-3 text-center text-gray-600 bg-blue-50/10">{row.registration.female}</td>
+                           <td className="p-3 text-center font-bold text-blue-700 bg-blue-50/50 border-r border-gray-100 group-hover:border-gray-200">{row.registration.total}</td>
+                           
+                           <td className="p-3 text-center text-gray-600 bg-green-50/10">{row.accommodation.male}</td>
+                           <td className="p-3 text-center text-gray-600 bg-green-50/10">{row.accommodation.female}</td>
+                           <td className="p-3 text-center font-bold text-green-700 bg-green-50/50 border-r border-gray-100 group-hover:border-gray-200">{row.accommodation.total}</td>
+                           
+                           <td className="p-3 text-center font-bold text-orange-700 bg-orange-50/30">{row.foodPackets}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+           </div>
+        )}
+
+        {/* REGISTRATIONS LIST TAB */}
+        {activeTab === 'registrations' && (
+          <div className="animate-in fade-in slide-in-from-right-2 duration-300 space-y-6">
+             
+             {/* Controls */}
+             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+                <div className="flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 focus-within:ring-2 focus-within:ring-orange-100 w-full md:w-96">
+                  <Search className="w-5 h-5 text-gray-400 mr-3" />
+                  <input 
+                    type="text" 
+                    placeholder="Search by name, mobile or city..." 
+                    className="bg-transparent border-none outline-none flex-grow text-gray-700 text-sm placeholder-gray-400"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                  {searchTerm && (
+                    <button onClick={() => setSearchTerm('')}><X className="w-4 h-4 text-gray-400 hover:text-gray-600 transition" /></button>
                   )}
-                </tr>
-              ))}
-              {filteredRegistrations.length === 0 && (
-                <tr>
-                  <td colSpan={isAuthenticated ? 6 : 5} className="p-12 text-center">
-                     <div className="flex flex-col items-center justify-center text-gray-400">
-                        <Search className="w-10 h-10 mb-3 opacity-20"/>
-                        <p className="text-lg font-medium text-gray-500">No registrations found</p>
-                        <p className="text-sm">Try adjusting your search terms</p>
-                     </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                </div>
+
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                  <button onClick={downloadCSV} className="flex-1 md:flex-none flex items-center justify-center px-4 py-2 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg text-sm font-medium transition text-gray-700 shadow-sm">
+                    <Download className="w-4 h-4 mr-2" /> Export CSV
+                  </button>
+                </div>
+             </div>
+
+            {/* List Table */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-gray-600 border-collapse">
+                  <thead className="bg-gray-50 text-gray-900 font-bold uppercase text-xs">
+                    <tr>
+                      <th className="p-4 border-b border-gray-200">Participant</th>
+                      <th className="p-4 border-b border-gray-200">Attendance</th>
+                      <th className="p-4 border-b border-gray-200">Guests</th>
+                      <th className="p-4 border-b border-gray-200">Stay</th>
+                      <th className="p-4 border-b border-gray-200">Food</th>
+                      {isAuthenticated && <th className="p-4 border-b border-gray-200 text-right">Actions</th>}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredRegistrations.map((reg) => (
+                      <tr key={reg.id} className="hover:bg-gray-50 transition group">
+                        <td className="p-4 align-top">
+                          <div className="font-bold text-gray-900">{reg.primaryParticipant.fullName}</div>
+                          <div className="text-orange-600 font-medium">{reg.primaryParticipant.mobile}</div>
+                          <div className="text-gray-400 text-xs">{reg.primaryParticipant.city}</div>
+                          <div className="text-gray-400 text-xs mt-1">{reg.primaryParticipant.gender}, {reg.primaryParticipant.age}y</div>
+                        </td>
+                        <td className="p-4 align-top">
+                          <div className="flex flex-wrap gap-1 max-w-[200px]">
+                            {reg.attendingDates.map(d => (
+                              <span key={d} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] rounded border border-blue-100 whitespace-nowrap">
+                                {d.split('(')[0].trim().split(',')[0].replace('March ', 'Mar ').replace('April ', 'Apr ')}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="p-4 align-top">
+                          {reg.additionalGuests.length > 0 ? (
+                            <div>
+                              <span className="font-bold text-gray-900">{reg.additionalGuests.length} Guests</span>
+                              <ul className="text-xs text-gray-500 mt-1 list-disc list-inside">
+                                {reg.additionalGuests.map(g => (
+                                  <li key={g.id} className="truncate max-w-[150px]">{g.fullName}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : (
+                            <span className="text-gray-300">-</span>
+                          )}
+                        </td>
+                        <td className="p-4 align-top">
+                          {reg.accommodation.required ? (
+                            <div>
+                              <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs font-bold rounded mb-1">Yes ({reg.accommodation.memberIds.length})</span>
+                              <div className="text-xs text-gray-500 whitespace-nowrap">
+                                <span className="text-gray-400">In:</span> {reg.accommodation.arrivalDate.split('-').slice(1).join('/')}<br/>
+                                <span className="text-gray-400">Out:</span> {reg.accommodation.departureDate.split('-').slice(1).join('/')}
+                              </div>
+                            </div>
+                          ) : <span className="text-gray-300">No</span>}
+                        </td>
+                        <td className="p-4 align-top">
+                          {reg.food.takeawayRequired ? (
+                            <div>
+                              <span className="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded mb-1">Yes ({reg.food.packetCount})</span>
+                              <div className="text-xs text-gray-500">
+                                 {reg.food.pickupDate.split('-').slice(1).join('/')}
+                              </div>
+                            </div>
+                          ) : <span className="text-gray-300">No</span>}
+                        </td>
+                        
+                        {isAuthenticated && (
+                          <td className="p-4 align-top text-right">
+                            <button 
+                              onClick={() => handleDelete(reg.primaryParticipant.mobile)}
+                              className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition opacity-0 group-hover:opacity-100"
+                              title="Delete Registration"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                    {filteredRegistrations.length === 0 && (
+                      <tr>
+                        <td colSpan={isAuthenticated ? 6 : 5} className="p-12 text-center">
+                           <div className="flex flex-col items-center justify-center text-gray-400">
+                              <Search className="w-10 h-10 mb-3 opacity-20"/>
+                              <p className="text-lg font-medium text-gray-500">No registrations found</p>
+                              <p className="text-sm">Try adjusting your search terms</p>
+                           </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
     </div>
   );
 };
