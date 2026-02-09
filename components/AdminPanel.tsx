@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { RegistrationData } from '../types';
 import { EVENT_DATES } from '../constants';
-import { Loader2, Trash2, Download, Search, RefreshCw, X, Lock, Unlock, ShieldCheck, BarChart3, Users, FileBarChart, Utensils } from 'lucide-react';
+import { Loader2, Trash2, Download, Search, RefreshCw, X, Lock, Unlock, ShieldCheck, BarChart3, Users, FileBarChart, Utensils, Calendar } from 'lucide-react';
 
 export const AdminPanel: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -98,6 +98,7 @@ export const AdminPanel: React.FC = () => {
     EVENT_DATES.forEach(d => {
        stats[d] = {
          date: d.split('(')[0].trim(),
+         originalDate: d,
          registrationsCount: 0, // Number of forms covering this date
          participants: { male: 0, female: 0, total: 0 }, // Number of actual people
          accommodation: { male: 0, female: 0, total: 0 },
@@ -162,7 +163,8 @@ export const AdminPanel: React.FC = () => {
        }
     });
 
-    return Object.values(stats);
+    // Return ordered array matching EVENT_DATES indices
+    return EVENT_DATES.map(d => stats[d]);
   };
 
   const filteredRegistrations = registrations.filter(reg => 
@@ -178,6 +180,37 @@ export const AdminPanel: React.FC = () => {
   const totalGuestsCount = registrations.reduce((acc, r) => acc + r.additionalGuests.length, 0);
   const totalParticipants = totalRegistrationsCount + totalGuestsCount;
   const totalFoodRequestCount = registrations.reduce((acc, r) => acc + (r.food.takeawayRequired ? r.food.packetCount : 0), 0);
+
+  // Helper for date formatting
+  const formatAdminDate = (dateStr: string) => {
+    // dateStr format "March 28, 2026"
+    const raw = dateStr.split('(')[0].trim();
+    const date = new Date(raw);
+    // Returns "Saturday, March 28"
+    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  };
+
+  // Section Definitions
+  const SECTIONS = [
+    { 
+      id: 'pre', 
+      title: 'Pre-Conference Days', 
+      indices: [0, 1, 2, 3, 4, 5, 6], 
+      color: 'bg-blue-50 text-blue-900 border-blue-200' 
+    },
+    { 
+      id: 'conf', 
+      title: 'Conference Days', 
+      indices: [7, 8], 
+      color: 'bg-purple-50 text-purple-900 border-purple-200' 
+    },
+    { 
+      id: 'post', 
+      title: 'Post-Conference Days', 
+      indices: [9, 10], 
+      color: 'bg-indigo-50 text-indigo-900 border-indigo-200' 
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
@@ -320,43 +353,88 @@ export const AdminPanel: React.FC = () => {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm border-collapse">
-                    <thead className="bg-gray-100 text-gray-600 text-xs uppercase tracking-wider">
+                    <thead className="bg-gray-800 text-white text-xs uppercase tracking-wider">
                       <tr>
-                        <th className="p-3 border-r border-gray-200 font-bold w-48">Event Date</th>
-                        <th className="p-3 border-r border-gray-200 text-center font-bold bg-gray-200/50">Registrations</th>
-                        <th className="p-3 border-r border-gray-200 text-center" colSpan={3}>Participants (Persons)</th>
-                        <th className="p-3 border-r border-gray-200 text-center" colSpan={3}>Accommodation (Persons)</th>
-                        <th className="p-3 text-center">Food (Packets)</th>
-                      </tr>
-                      <tr className="bg-gray-50 border-b border-gray-200 text-gray-500">
-                        <th className="p-2 border-r border-gray-200"></th>
-                        <th className="p-2 border-r border-gray-200 text-center text-[10px] font-bold bg-gray-100">Forms</th>
-                        <th className="p-2 text-center text-[10px] w-20">Male</th>
-                        <th className="p-2 text-center text-[10px] w-20">Female</th>
-                        <th className="p-2 text-center text-[10px] w-20 border-r border-gray-200 bg-gray-100 font-bold">Total</th>
-                        <th className="p-2 text-center text-[10px] w-20">Male</th>
-                        <th className="p-2 text-center text-[10px] w-20">Female</th>
-                        <th className="p-2 text-center text-[10px] w-20 border-r border-gray-200 bg-gray-100 font-bold">Total</th>
-                        <th className="p-2 text-center text-[10px]">Total</th>
+                        <th className="p-4 w-48 font-bold border-r border-gray-700">Event Date</th>
+                        <th className="p-4 w-24 text-center border-r border-gray-700">Forms</th>
+                        <th className="p-4 text-center border-r border-gray-700 bg-blue-900/40" style={{ width: '25%' }}>Attendance</th>
+                        <th className="p-4 text-center border-r border-gray-700 bg-green-900/40" style={{ width: '25%' }}>Accommodation</th>
+                        <th className="p-4 text-center bg-orange-900/40" style={{ width: '25%' }}>Food</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {dashboardStats.map((row: any) => (
-                        <tr key={row.date} className="hover:bg-gray-50 transition group">
-                           <td className="p-3 font-medium text-gray-900 border-r border-gray-100 group-hover:border-gray-200">{row.date}</td>
-                           
-                           <td className="p-3 text-center font-bold text-gray-700 border-r border-gray-100 group-hover:border-gray-200 bg-gray-50/50">{row.registrationsCount}</td>
+                      {SECTIONS.map(section => (
+                        <React.Fragment key={section.id}>
+                          {/* Section Header */}
+                          <tr className={`${section.color} border-y`}>
+                             <td colSpan={5} className="p-3 pl-4 text-xs font-bold uppercase tracking-widest flex items-center">
+                                <Calendar className="w-3 h-3 mr-2 opacity-70" /> {section.title}
+                             </td>
+                          </tr>
+                          
+                          {/* Data Rows */}
+                          {section.indices.map(index => {
+                             const row = dashboardStats[index];
+                             if (!row) return null;
+                             return (
+                                <tr key={row.date} className="hover:bg-gray-50 transition border-b border-gray-100">
+                                   {/* Date */}
+                                   <td className="p-4 text-sm font-bold text-gray-700 border-r border-gray-100">
+                                      {formatAdminDate(row.originalDate)}
+                                   </td>
+                                   
+                                   {/* Forms */}
+                                   <td className="p-4 text-center border-r border-gray-100">
+                                      <span className="inline-block px-2.5 py-1 bg-gray-100 rounded-md text-xs font-bold text-gray-600">
+                                         {row.registrationsCount}
+                                      </span>
+                                   </td>
 
-                           <td className="p-3 text-center text-gray-600 bg-blue-50/10">{row.participants.male}</td>
-                           <td className="p-3 text-center text-gray-600 bg-blue-50/10">{row.participants.female}</td>
-                           <td className="p-3 text-center font-bold text-blue-700 bg-blue-50/50 border-r border-gray-100 group-hover:border-gray-200">{row.participants.total}</td>
-                           
-                           <td className="p-3 text-center text-gray-600 bg-green-50/10">{row.accommodation.male}</td>
-                           <td className="p-3 text-center text-gray-600 bg-green-50/10">{row.accommodation.female}</td>
-                           <td className="p-3 text-center font-bold text-green-700 bg-green-50/50 border-r border-gray-100 group-hover:border-gray-200">{row.accommodation.total}</td>
-                           
-                           <td className="p-3 text-center font-bold text-orange-700 bg-orange-50/30">{row.foodPackets}</td>
-                        </tr>
+                                   {/* Attendance */}
+                                   <td className="p-4 text-center bg-blue-50/20 border-r border-gray-100">
+                                      <div className="flex flex-col items-center justify-center">
+                                         <span className="text-2xl font-bold text-blue-700">{row.participants.total}</span>
+                                         {row.participants.total > 0 && (
+                                            <div className="flex gap-3 text-[10px] font-medium text-gray-400 mt-1 uppercase tracking-wide">
+                                               <span className="flex items-center" title="Male Participants">
+                                                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mr-1"></span>M: {row.participants.male}
+                                               </span>
+                                               <span className="flex items-center" title="Female Participants">
+                                                  <span className="w-1.5 h-1.5 rounded-full bg-pink-400 mr-1"></span>F: {row.participants.female}
+                                               </span>
+                                            </div>
+                                         )}
+                                      </div>
+                                   </td>
+                                   
+                                   {/* Accommodation */}
+                                   <td className="p-4 text-center bg-green-50/20 border-r border-gray-100">
+                                      <div className="flex flex-col items-center justify-center">
+                                         <span className="text-2xl font-bold text-green-700">{row.accommodation.total}</span>
+                                         {row.accommodation.total > 0 && (
+                                            <div className="flex gap-3 text-[10px] font-medium text-gray-400 mt-1 uppercase tracking-wide">
+                                               <span className="flex items-center" title="Male Accommodation">
+                                                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1"></span>M: {row.accommodation.male}
+                                               </span>
+                                               <span className="flex items-center" title="Female Accommodation">
+                                                  <span className="w-1.5 h-1.5 rounded-full bg-pink-400 mr-1"></span>F: {row.accommodation.female}
+                                               </span>
+                                            </div>
+                                         )}
+                                      </div>
+                                   </td>
+                                   
+                                   {/* Food */}
+                                   <td className="p-4 text-center bg-orange-50/20">
+                                      <div className="flex flex-col items-center justify-center">
+                                        <span className="text-2xl font-bold text-orange-700">{row.foodPackets}</span>
+                                        <span className="text-[10px] text-orange-400 mt-1 font-semibold uppercase">Packets</span>
+                                      </div>
+                                   </td>
+                                </tr>
+                             );
+                          })}
+                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>
