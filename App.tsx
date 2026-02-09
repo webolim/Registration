@@ -24,13 +24,29 @@ const initialData: RegistrationData = {
 };
 
 const STEPS: { id: StepId; title: string; icon: any }[] = [
-  { id: 'PRIMARY', title: 'Personal', icon: User },
+  { id: 'PRIMARY', title: 'Basics', icon: User },
   { id: 'ATTENDANCE', title: 'Dates', icon: Calendar },
   { id: 'GUESTS', title: 'Guests', icon: Users },
   { id: 'ACCOMMODATION', title: 'Stay', icon: Home },
   { id: 'FOOD', title: 'Food', icon: Utensils },
   { id: 'REVIEW', title: 'Review', icon: FileText },
 ];
+
+// Date Categorization Helper
+const DATE_GROUPS = {
+  PRE: { 
+    title: "Pre-Conference Days", 
+    dates: EVENT_DATES.slice(0, 7) // Mar 28 - Apr 03
+  },
+  CONF: { 
+    title: "Conference Days", 
+    dates: EVENT_DATES.slice(7, 9) // Apr 04 - Apr 05
+  },
+  POST: { 
+    title: "Post-Conference Days", 
+    dates: EVENT_DATES.slice(9, 11) // Apr 06 - Apr 07
+  }
+};
 
 // --- Helper Functions ---
 
@@ -44,6 +60,15 @@ const formatDateForInput = (date: Date): string => {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+};
+
+const getDisplayDate = (date: string) => {
+  const parts = date.split('(');
+  const rawDateStr = parts[0].trim();
+  const dateObj = new Date(rawDateStr);
+  const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+  const dateWithoutYear = rawDateStr.replace(', 2026', '').replace(' 2026', '');
+  return `${dayName}, ${dateWithoutYear}`;
 };
 
 // --- Reusable UI Components ---
@@ -78,7 +103,7 @@ const StyledSelect = (props: React.SelectHTMLAttributes<HTMLSelectElement>) => (
 );
 
 const SectionTitle = ({ title, subtitle }: { title: string, subtitle?: string }) => (
-  <div className="mb-8 border-b border-gray-100 pb-4">
+  <div className="mb-8 border-b border-orange-100 pb-4">
     <h2 className="text-2xl font-bold text-gray-900 tracking-tight">{title}</h2>
     {subtitle && <p className="text-gray-500 mt-1.5 text-sm leading-relaxed">{subtitle}</p>}
   </div>
@@ -362,9 +387,9 @@ export default function App() {
     <div className="step-enter">
       {/* Search Banner */}
       {!isSearchMode && (
-         <div className="bg-white border-l-4 border-orange-500 shadow-md rounded-r-xl p-5 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all hover:shadow-lg">
+         <div className="bg-orange-50 border-l-4 border-orange-500 shadow-md rounded-r-xl p-5 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all hover:shadow-lg">
            <div className="flex items-start">
-             <div className="bg-orange-100 p-2 rounded-full mr-4 text-orange-600 hidden sm:block">
+             <div className="bg-orange-100 p-2 rounded-full mr-4 text-orange-700 hidden sm:block">
                <Edit3 className="w-5 h-5" />
              </div>
              <div>
@@ -435,12 +460,12 @@ export default function App() {
         </InputGroup>
 
         <div className="md:col-span-2">
-          <InputGroup label="City / Town" required>
+          <InputGroup label="Where will you be coming from" required>
              <div className="relative">
               <StyledInput
                 value={data.primaryParticipant.city}
                 onChange={e => setData({...data, primaryParticipant: {...data.primaryParticipant, city: e.target.value}})}
-                placeholder="Current city of residence"
+                placeholder="City / Town"
               />
                <MapPin className="absolute right-3 top-3.5 text-gray-400 w-5 h-5" />
              </div>
@@ -450,49 +475,68 @@ export default function App() {
     </div>
   );
 
-  const renderAttendance = () => (
-    <div className="step-enter">
-      <SectionTitle title="Event Attendance" subtitle="Select all the dates you plan to be present at the Satram." />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {EVENT_DATES.map(date => {
-          const isSelected = data.attendingDates.includes(date);
-          const parts = date.split('(');
-          const dateStr = parts[0].trim();
-          const extra = parts[1] ? `(${parts[1]}` : '';
+  const renderAttendance = () => {
+    const renderDateGroup = (title: string, dates: string[]) => (
+      <div className="mb-8 last:mb-0">
+        <div className="flex items-center mb-3">
+          <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">{title}</h3>
+          <div className="ml-3 h-px bg-gray-200 flex-grow"></div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {dates.map(date => {
+            const isSelected = data.attendingDates.includes(date);
+            const displayDate = getDisplayDate(date);
+            
+            // Extract extra label inside brackets if any
+            const parts = date.split('(');
+            const extraRaw = parts[1] ? parts[1] : '';
+            const extra = extraRaw.replace(')', '').trim();
 
-          return (
-            <div 
-              key={date}
-              onClick={() => {
-                if (isSelected) {
-                  setData({...data, attendingDates: data.attendingDates.filter(d => d !== date)});
-                } else {
-                  setData({...data, attendingDates: [...data.attendingDates, date]});
-                }
-              }}
-              className={`
-                cursor-pointer p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-between group
-                ${isSelected 
-                  ? 'border-orange-500 bg-orange-50 shadow-md' 
-                  : 'border-gray-200 bg-white hover:border-orange-200 hover:bg-orange-50/50'}
-              `}
-            >
-              <div>
-                <span className={`block font-bold ${isSelected ? 'text-orange-900' : 'text-gray-700 group-hover:text-gray-900'}`}>
-                  {dateStr}
-                </span>
-                {extra && <span className="text-xs font-semibold text-orange-600 block mt-1">{extra.replace(')', '')}</span>}
+            return (
+              <div 
+                key={date}
+                onClick={() => {
+                  if (isSelected) {
+                    setData({...data, attendingDates: data.attendingDates.filter(d => d !== date)});
+                  } else {
+                    setData({...data, attendingDates: [...data.attendingDates, date]});
+                  }
+                }}
+                className={`
+                  cursor-pointer p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-between group
+                  ${isSelected 
+                    ? 'border-orange-500 bg-orange-50 shadow-md' 
+                    : 'border-gray-200 bg-white hover:border-orange-200 hover:bg-orange-50/50'}
+                `}
+              >
+                <div>
+                  <span className={`block font-bold ${isSelected ? 'text-orange-900' : 'text-gray-700 group-hover:text-gray-900'}`}>
+                    {displayDate}
+                  </span>
+                  {extra && <span className="text-xs font-semibold text-orange-600 block mt-1">{extra}</span>}
+                </div>
+                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'border-orange-500 bg-orange-500' : 'border-gray-300 group-hover:border-orange-300'}`}>
+                   {isSelected && <CheckCircle2 className="w-4 h-4 text-white" />}
+                </div>
               </div>
-              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'border-orange-500 bg-orange-500' : 'border-gray-300 group-hover:border-orange-300'}`}>
-                 {isSelected && <CheckCircle2 className="w-4 h-4 text-white" />}
-              </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
-      <p className="text-xs text-gray-400 mt-4 italic text-center">Select multiple dates if applicable.</p>
-    </div>
-  );
+    );
+
+    return (
+      <div className="step-enter">
+        <SectionTitle title="Event Attendance" subtitle="Select all the dates you plan to be present at the Satram." />
+        
+        {renderDateGroup(DATE_GROUPS.PRE.title, DATE_GROUPS.PRE.dates)}
+        {renderDateGroup(DATE_GROUPS.CONF.title, DATE_GROUPS.CONF.dates)}
+        {renderDateGroup(DATE_GROUPS.POST.title, DATE_GROUPS.POST.dates)}
+
+        <p className="text-xs text-gray-400 mt-4 italic text-center">Select all dates applicable.</p>
+      </div>
+    );
+  };
 
   const renderGuests = () => (
     <div className="step-enter">
@@ -601,22 +645,22 @@ export default function App() {
           <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm animate-in fade-in slide-in-from-bottom-2">
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-3">Who needs accommodation?</label>
-              <div className="flex flex-wrap gap-2">
+              <div className="space-y-2">
                 {[data.primaryParticipant, ...data.additionalGuests].map(p => {
                   const isChecked = data.accommodation.memberIds.includes(p.id);
                   return (
                     <label 
                       key={p.id} 
                       className={`
-                        cursor-pointer select-none px-4 py-2 rounded-full border text-sm font-medium transition
+                        flex items-center p-3 rounded-lg border cursor-pointer transition-all
                         ${isChecked 
-                          ? 'bg-orange-600 text-white border-orange-600 shadow-sm' 
-                          : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}
+                          ? 'bg-orange-50 border-orange-300' 
+                          : 'bg-white border-gray-200 hover:bg-gray-50'}
                       `}
                     >
                       <input
                         type="checkbox"
-                        className="hidden"
+                        className="w-5 h-5 rounded text-orange-600 focus:ring-orange-500 border-gray-300 mr-3"
                         checked={isChecked}
                         onChange={e => {
                           const ids = data.accommodation.memberIds;
@@ -624,7 +668,7 @@ export default function App() {
                           setData({...data, accommodation: {...data.accommodation, memberIds: newIds}});
                         }}
                       />
-                      {p.fullName || 'Unnamed Guest'}
+                      <span className="font-medium text-gray-800">{p.fullName || 'Unnamed Guest'}</span>
                     </label>
                   )
                 })}
@@ -699,79 +743,109 @@ export default function App() {
     );
   };
 
-  const renderReview = () => (
-    <div className="step-enter">
-      <SectionTitle title="Final Review" subtitle="Please check your details carefully before submitting." />
-      
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-        {/* Header Ticket Style */}
-        <div className="bg-gradient-to-r from-orange-50 to-white px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-          <div>
-            <h3 className="font-bold text-gray-900 text-lg">{data.primaryParticipant.fullName}</h3>
-            <p className="text-sm text-gray-500 font-medium">{data.primaryParticipant.mobile}</p>
-          </div>
-          <div className="text-right">
-             <span className="inline-block px-3 py-1 bg-white text-orange-700 text-xs font-bold rounded-full border border-orange-200 shadow-sm">
-               Total: {data.additionalGuests.length + 1} Person(s)
-             </span>
-          </div>
-        </div>
+  const renderReview = () => {
+    const renderDateLine = (title: string, groupDates: string[]) => {
+       const selectedInGroup = groupDates.filter(d => data.attendingDates.includes(d));
+       if (selectedInGroup.length === 0) return null;
 
-        <div className="p-6 space-y-6">
-          <div className="flex items-start space-x-4">
-             <div className="bg-gray-50 p-2.5 rounded-lg border border-gray-100"><Calendar className="w-5 h-5 text-orange-600" /></div>
-             <div>
-               <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Attending Dates</h4>
-               <p className="text-sm text-gray-600 mt-1 leading-relaxed">{data.attendingDates.join(', ') || 'None selected'}</p>
-             </div>
-          </div>
+       const formattedDates = selectedInGroup.map(d => {
+         const raw = d.split('(')[0].trim();
+         return raw.replace(', 2026', '').replace(' 2026', ''); // e.g. "March 28"
+       }).join(', ');
 
-          <div className="flex items-start space-x-4">
-             <div className="bg-gray-50 p-2.5 rounded-lg border border-gray-100"><Users className="w-5 h-5 text-orange-600" /></div>
-             <div>
-               <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Guests</h4>
-               {data.additionalGuests.length > 0 ? (
-                 <ul className="text-sm text-gray-600 mt-1 list-disc list-inside">
-                    {data.additionalGuests.map(g => <li key={g.id}>{g.fullName}</li>)}
-                 </ul>
-               ) : (
-                 <p className="text-sm text-gray-500 mt-1">No additional guests</p>
-               )}
-             </div>
+       return (
+         <div className="mt-2 text-sm text-gray-700">
+           <span className="font-bold text-gray-800">{title}:</span> {formattedDates}
+         </div>
+       );
+    };
+
+    return (
+      <div className="step-enter">
+        <SectionTitle title="Final Review" subtitle="Please check your details carefully before submitting." />
+        
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          {/* Header Ticket Style */}
+          <div className="bg-gradient-to-r from-orange-50 to-white px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+            <div>
+              <h3 className="font-bold text-gray-900 text-lg">{data.primaryParticipant.fullName}</h3>
+              <p className="text-sm text-gray-500 font-medium">{data.primaryParticipant.mobile}</p>
+            </div>
+            <div className="text-right">
+               <span className="inline-block px-3 py-1 bg-white text-orange-700 text-xs font-bold rounded-full border border-orange-200 shadow-sm">
+                 Total: {data.additionalGuests.length + 1} Person(s)
+               </span>
+            </div>
           </div>
 
-          <div className="flex items-start space-x-4">
-             <div className="bg-gray-50 p-2.5 rounded-lg border border-gray-100"><Home className="w-5 h-5 text-orange-600" /></div>
-             <div>
-               <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Accommodation</h4>
-               <p className="text-sm text-gray-600 mt-1">
-                 {data.accommodation.required 
-                   ? `Yes, for ${data.accommodation.memberIds.length} people. (${data.accommodation.arrivalDate} to ${data.accommodation.departureDate})` 
-                   : 'Not Required'}
-               </p>
-             </div>
-          </div>
+          <div className="p-6 space-y-6">
+            <div className="flex items-start space-x-4">
+               <div className="bg-gray-50 p-2.5 rounded-lg border border-gray-100"><Calendar className="w-5 h-5 text-orange-600" /></div>
+               <div className="flex-grow">
+                 <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Attending Dates</h4>
+                 <div className="text-sm text-gray-600 mt-1 leading-relaxed">
+                   {data.attendingDates.length === EVENT_DATES.length ? (
+                      <span className="font-bold text-orange-700">All Days (March 28 - April 07)</span>
+                   ) : data.attendingDates.length === 0 ? (
+                      <span className="text-gray-400 italic">None selected</span>
+                   ) : (
+                      <div className="space-y-1">
+                        {renderDateLine("Pre-Conference", DATE_GROUPS.PRE.dates)}
+                        {renderDateLine("Conference", DATE_GROUPS.CONF.dates)}
+                        {renderDateLine("Post-Conference", DATE_GROUPS.POST.dates)}
+                      </div>
+                   )}
+                 </div>
+               </div>
+            </div>
 
-          <div className="flex items-start space-x-4">
-             <div className="bg-gray-50 p-2.5 rounded-lg border border-gray-100"><Utensils className="w-5 h-5 text-orange-600" /></div>
-             <div>
-               <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Return Food</h4>
-               <p className="text-sm text-gray-600 mt-1">
-                 {data.food.takeawayRequired 
-                   ? `Collect ${data.food.packetCount} packets on ${data.food.pickupDate}` 
-                   : 'Not Required'}
-               </p>
-             </div>
+            <div className="flex items-start space-x-4">
+               <div className="bg-gray-50 p-2.5 rounded-lg border border-gray-100"><Users className="w-5 h-5 text-orange-600" /></div>
+               <div>
+                 <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Guests</h4>
+                 {data.additionalGuests.length > 0 ? (
+                   <ul className="text-sm text-gray-600 mt-1 list-disc list-inside">
+                      {data.additionalGuests.map(g => <li key={g.id}>{g.fullName}</li>)}
+                   </ul>
+                 ) : (
+                   <p className="text-sm text-gray-500 mt-1">No additional guests</p>
+                 )}
+               </div>
+            </div>
+
+            <div className="flex items-start space-x-4">
+               <div className="bg-gray-50 p-2.5 rounded-lg border border-gray-100"><Home className="w-5 h-5 text-orange-600" /></div>
+               <div>
+                 <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Accommodation</h4>
+                 <p className="text-sm text-gray-600 mt-1">
+                   {data.accommodation.required 
+                     ? `Yes, for ${data.accommodation.memberIds.length} people. (${data.accommodation.arrivalDate} to ${data.accommodation.departureDate})` 
+                     : 'Not Required'}
+                 </p>
+               </div>
+            </div>
+
+            <div className="flex items-start space-x-4">
+               <div className="bg-gray-50 p-2.5 rounded-lg border border-gray-100"><Utensils className="w-5 h-5 text-orange-600" /></div>
+               <div>
+                 <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Return Food</h4>
+                 <p className="text-sm text-gray-600 mt-1">
+                   {data.food.takeawayRequired 
+                     ? `Collect ${data.food.packetCount} packets on ${data.food.pickupDate}` 
+                     : 'Not Required'}
+                 </p>
+               </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderSuccess = () => (
     <div className="text-center py-12 animate-in zoom-in duration-300">
-      <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
-        <PartyPopper className="w-12 h-12 text-green-600" />
+      <div className="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+        <PartyPopper className="w-12 h-12 text-orange-600" />
       </div>
       <h2 className="text-3xl font-bold text-gray-900 mb-3">Registration Successful!</h2>
       <p className="text-gray-600 max-w-md mx-auto mb-8 leading-relaxed">
@@ -779,10 +853,10 @@ export default function App() {
       </p>
       <div className="flex justify-center space-x-4">
         <button 
-          onClick={() => window.location.reload()}
+          onClick={() => window.location.href = 'https://webolim.github.io/Valmiki-Ramayana-Conference-2026/'}
           className="px-8 py-3 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition shadow-sm"
         >
-          Return to Home
+          Return to Conference Page
         </button>
       </div>
     </div>
@@ -816,18 +890,27 @@ export default function App() {
       {!isSearchMode && (
         <>
           {/* Wizard Progress Bar - Mobile */}
-          <div className="md:hidden mb-6 flex items-center justify-between bg-white border border-gray-100 shadow-sm p-4 rounded-xl">
-             <span className="font-bold text-gray-800">Step {STEPS.findIndex(s => s.id === step) + 1} of {STEPS.length}</span>
-             <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100">
-                {Math.round(((STEPS.findIndex(s => s.id === step) + 1) / STEPS.length) * 100)}%
+          <div className="md:hidden mb-6 flex items-center justify-between bg-orange-50 border border-orange-200 shadow-md p-4 rounded-xl">
+             <div className="flex items-center gap-2">
+                <span className="bg-orange-100 p-1.5 rounded-full text-orange-600">
+                   {/* Get icon for current step */}
+                   {(() => {
+                      const CurrentIcon = STEPS.find(s => s.id === step)?.icon || User;
+                      return <CurrentIcon className="w-4 h-4" />;
+                   })()}
+                </span>
+                <span className="font-bold text-gray-900">{STEPS.find(s => s.id === step)?.title}</span>
+             </div>
+             <span className="text-xs font-bold text-orange-700 bg-orange-100 px-3 py-1 rounded-full border border-orange-200">
+                Step {STEPS.findIndex(s => s.id === step) + 1} of {STEPS.length}
              </span>
           </div>
 
           {/* Wizard Progress Bar - Desktop */}
-          <div className="hidden md:flex mb-12 justify-between relative px-4">
-             <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-gray-100 -z-0 rounded-full"></div>
+          <div className="hidden md:flex mb-16 justify-between relative px-4">
+             <div className="absolute top-5 left-4 right-4 h-1 bg-gray-200 -z-0 rounded-full"></div>
              <div 
-               className="absolute top-1/2 left-4 h-0.5 bg-orange-500 -z-0 rounded-full transition-all duration-500"
+               className="absolute top-5 left-4 h-1 bg-orange-500 -z-0 rounded-full transition-all duration-500"
                style={{ width: `${(STEPS.findIndex(s => s.id === step) / (STEPS.length - 1)) * 100}%` }}
              ></div>
              
@@ -839,26 +922,44 @@ export default function App() {
                 return (
                   <div key={s.id} className="relative z-10 flex flex-col items-center group cursor-default">
                     <div className={`
-                       w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-sm bg-white font-bold text-sm
-                       ${isCurrent ? 'border-orange-500 text-orange-600 scale-125 ring-4 ring-orange-50' : 
+                       w-12 h-12 rounded-full flex items-center justify-center border-4 transition-all duration-300 shadow-sm bg-white font-bold text-lg
+                       ${isCurrent ? 'border-orange-500 text-orange-600 scale-110 ring-4 ring-orange-100' : 
                          isCompleted ? 'border-orange-500 bg-orange-500 text-white' : 
-                         'border-gray-200 text-gray-300'}
+                         'border-gray-200 text-gray-400 bg-gray-50'}
                     `}>
-                      {isCompleted ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
+                      {isCompleted ? <CheckCircle2 className="w-6 h-6" /> : idx + 1}
+                    </div>
+                    <div className={`
+                       absolute top-14 text-xs font-bold uppercase tracking-wider whitespace-nowrap px-2 py-1 rounded transition-colors
+                       ${isCurrent ? 'text-orange-700 bg-orange-50' : 
+                         isCompleted ? 'text-gray-900' : 
+                         'text-gray-400'}
+                    `}>
+                      {s.title}
                     </div>
                   </div>
                 )
              })}
           </div>
 
-          {/* Error Message */}
+          {/* Error Message - Fixed Bottom Toast */}
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-700 rounded-lg flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-2">
-              <div className="flex items-center">
-                <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
-                <span className="text-sm font-medium">{error}</span>
+            <div className="fixed bottom-6 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-lg z-[100] animate-in slide-in-from-bottom-5 fade-in duration-300">
+              <div className="bg-red-50 border-l-4 border-red-500 text-red-800 p-4 rounded-r-lg shadow-2xl flex items-start justify-between">
+                <div className="flex items-start">
+                  <AlertCircle className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-red-600" />
+                  <div className="flex-1">
+                    <h3 className="text-sm font-bold block mb-1">Attention Needed</h3>
+                    <p className="text-sm font-medium opacity-90">{error}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setError(null)} 
+                  className="ml-4 text-red-400 hover:text-red-600 hover:bg-red-100 p-1 rounded transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600"><X className="w-4 h-4" /></button>
             </div>
           )}
 
