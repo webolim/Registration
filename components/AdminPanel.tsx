@@ -355,11 +355,13 @@ export const AdminPanel: React.FC = () => {
                   <table className="w-full text-left text-sm border-collapse">
                     <thead className="bg-gray-800 text-white text-xs uppercase tracking-wider">
                       <tr>
-                        <th className="p-4 w-48 font-bold border-r border-gray-700">Event Date</th>
-                        <th className="p-4 w-24 text-center border-r border-gray-700">Forms</th>
-                        <th className="p-4 text-center border-r border-gray-700 bg-blue-900/40" style={{ width: '25%' }}>Attendance</th>
-                        <th className="p-4 text-center border-r border-gray-700 bg-green-900/40" style={{ width: '25%' }}>Accommodation</th>
-                        <th className="p-4 text-center bg-orange-900/40" style={{ width: '25%' }}>Food</th>
+                        {/* Sticky Date Column Header */}
+                        <th className="p-4 min-w-[160px] font-bold border-r border-gray-700 sticky left-0 z-20 bg-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]">Event Date</th>
+                        
+                        <th className="p-4 w-24 text-center border-r border-gray-700 min-w-[100px]">Forms</th>
+                        <th className="p-4 text-center border-r border-gray-700 bg-blue-900/40 min-w-[200px]" style={{ width: '25%' }}>Attendance</th>
+                        <th className="p-4 text-center border-r border-gray-700 bg-green-900/40 min-w-[200px]" style={{ width: '25%' }}>Accommodation</th>
+                        <th className="p-4 text-center bg-orange-900/40 min-w-[100px]" style={{ width: '25%' }}>Food</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -367,8 +369,10 @@ export const AdminPanel: React.FC = () => {
                         <React.Fragment key={section.id}>
                           {/* Section Header */}
                           <tr className={`${section.color} border-y`}>
-                             <td colSpan={5} className="p-3 pl-4 text-xs font-bold uppercase tracking-widest flex items-center">
-                                <Calendar className="w-3 h-3 mr-2 opacity-70" /> {section.title}
+                             <td colSpan={5} className="p-3 pl-4 text-xs font-bold uppercase tracking-widest">
+                                <div className="sticky left-0 flex items-center">
+                                  <Calendar className="w-3 h-3 mr-2 opacity-70" /> {section.title}
+                                </div>
                              </td>
                           </tr>
                           
@@ -377,9 +381,9 @@ export const AdminPanel: React.FC = () => {
                              const row = dashboardStats[index];
                              if (!row) return null;
                              return (
-                                <tr key={row.date} className="hover:bg-gray-50 transition border-b border-gray-100">
-                                   {/* Date */}
-                                   <td className="p-4 text-sm font-bold text-gray-700 border-r border-gray-100">
+                                <tr key={row.date} className="hover:bg-gray-50 transition border-b border-gray-100 group">
+                                   {/* Sticky Date Cell */}
+                                   <td className="p-4 text-sm font-bold text-gray-700 border-r border-gray-100 sticky left-0 z-10 bg-white group-hover:bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                       {formatAdminDate(row.originalDate)}
                                    </td>
                                    
@@ -476,23 +480,27 @@ export const AdminPanel: React.FC = () => {
                 <table className="w-full text-left text-sm text-gray-600 border-collapse">
                   <thead className="bg-gray-50 text-gray-900 font-bold uppercase text-xs">
                     <tr>
-                      <th className="p-4 border-b border-gray-200">Participant</th>
-                      <th className="p-4 border-b border-gray-200">Attendance</th>
-                      <th className="p-4 border-b border-gray-200">Guests</th>
-                      <th className="p-4 border-b border-gray-200">Stay</th>
-                      <th className="p-4 border-b border-gray-200">Food</th>
-                      {isAuthenticated && <th className="p-4 border-b border-gray-200 text-right">Actions</th>}
+                      {/* Sticky Participant Column Header */}
+                      <th className="p-4 border-b border-gray-200 sticky left-0 z-20 bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[200px]">Participant</th>
+                      
+                      <th className="p-4 border-b border-gray-200 min-w-[150px]">Attendance</th>
+                      <th className="p-4 border-b border-gray-200 min-w-[150px]">Guests</th>
+                      <th className="p-4 border-b border-gray-200 min-w-[150px]">Stay</th>
+                      <th className="p-4 border-b border-gray-200 min-w-[150px]">Food</th>
+                      {isAuthenticated && <th className="p-4 border-b border-gray-200 text-right min-w-[100px]">Actions</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {filteredRegistrations.map((reg) => (
                       <tr key={reg.id} className="hover:bg-gray-50 transition group">
-                        <td className="p-4 align-top">
+                        {/* Sticky Participant Cell */}
+                        <td className="p-4 align-top sticky left-0 z-10 bg-white group-hover:bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] border-r border-gray-100">
                           <div className="font-bold text-gray-900">{reg.primaryParticipant.fullName}</div>
                           <div className="text-orange-600 font-medium">{reg.primaryParticipant.mobile}</div>
                           <div className="text-gray-400 text-xs">{reg.primaryParticipant.city}</div>
                           <div className="text-gray-400 text-xs mt-1">{reg.primaryParticipant.gender}, {reg.primaryParticipant.age}y</div>
                         </td>
+                        
                         <td className="p-4 align-top">
                           <div className="flex flex-wrap gap-1 max-w-[200px]">
                             {reg.attendingDates.map(d => (
