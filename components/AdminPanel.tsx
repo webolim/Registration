@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { RegistrationData } from '../types';
 import { EVENT_DATES } from '../constants';
-import { Loader2, Trash2, Download, Search, RefreshCw, X, Lock, Unlock, ShieldCheck, BarChart3, Users, FileBarChart, Utensils, Calendar } from 'lucide-react';
+import { Loader2, Trash2, Download, Search, RefreshCw, X, Lock, Unlock, ShieldCheck, BarChart3, Users, FileBarChart, Utensils, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 
 export const AdminPanel: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -12,6 +12,9 @@ export const AdminPanel: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'dashboard' | 'registrations'>('dashboard');
+  
+  // State for mobile popups (key format: 'date-type')
+  const [activePopup, setActivePopup] = useState<string | null>(null);
 
   // Simple hardcoded password for demonstration
   const ADMIN_PASSWORD = "sri-rama-admin"; 
@@ -41,6 +44,11 @@ export const AdminPanel: React.FC = () => {
     } else {
       alert("Invalid Password");
     }
+  };
+
+  const handleMobileStatClick = (key: string) => {
+    // Toggle popup: if clicked same key, close it; otherwise open new one
+    setActivePopup(prev => prev === key ? null : key);
   };
 
   const handleDelete = async (mobile: string) => {
@@ -349,12 +357,12 @@ export const AdminPanel: React.FC = () => {
               </div>
 
               {/* Main Report Table */}
-              <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden relative">
                 <div className="px-4 py-3 md:px-6 md:py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                   <h3 className="font-bold text-gray-800 text-sm md:text-base">11-Day Event Overview</h3>
                   <span className="text-xs font-medium text-gray-500">Live Data</span>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto min-h-[300px] pb-12">
                   <table className="w-full text-left border-collapse">
                     <thead className="bg-gray-800 text-white uppercase tracking-wider">
                       <tr>
@@ -367,10 +375,12 @@ export const AdminPanel: React.FC = () => {
                            Forms
                         </th>
                         <th className="p-2 md:p-4 text-[9px] md:text-xs text-center border-r border-gray-700 bg-blue-900/40 min-w-[70px] md:min-w-[200px]" style={{ width: '25%' }}>
-                           Attendance
+                           <span className="md:hidden">ATTEND</span>
+                           <span className="hidden md:inline">Attendance</span>
                         </th>
                         <th className="p-2 md:p-4 text-[9px] md:text-xs text-center border-r border-gray-700 bg-green-900/40 min-w-[70px] md:min-w-[200px]" style={{ width: '25%' }}>
-                           Accommodation
+                           <span className="md:hidden">STAY</span>
+                           <span className="hidden md:inline">Accommodation</span>
                         </th>
                         <th className="p-2 md:p-4 text-[9px] md:text-xs text-center bg-orange-900/40 min-w-[50px] md:min-w-[100px]" style={{ width: '25%' }}>
                            Food
@@ -394,6 +404,12 @@ export const AdminPanel: React.FC = () => {
                           {section.indices.map(index => {
                              const row = dashboardStats[index];
                              if (!row) return null;
+                             
+                             const attnKey = `${row.date}-attn`;
+                             const stayKey = `${row.date}-stay`;
+                             const isAttnPopup = activePopup === attnKey;
+                             const isStayPopup = activePopup === stayKey;
+
                              return (
                                 <tr key={row.date} className="hover:bg-gray-50 transition border-b border-gray-100 group">
                                    {/* Sticky Date Cell */}
@@ -409,34 +425,80 @@ export const AdminPanel: React.FC = () => {
                                    </td>
 
                                    {/* Attendance */}
-                                   <td className="p-2 md:p-4 text-center bg-blue-50/20 border-r border-gray-100">
-                                      <div className="flex flex-col items-center justify-center">
-                                         <span className="text-sm md:text-2xl font-bold text-blue-700">{row.participants.total}</span>
+                                   <td 
+                                     className="p-2 md:p-4 text-center bg-blue-50/20 border-r border-gray-100 relative cursor-pointer md:cursor-default" 
+                                     onClick={() => handleMobileStatClick(attnKey)}
+                                   >
+                                      <div className="flex flex-col items-center justify-center relative">
+                                         <span className="text-sm md:text-2xl font-bold text-blue-700 flex items-center gap-1">
+                                            {row.participants.total}
+                                            {row.participants.total > 0 && <span className="md:hidden text-blue-400 text-[8px]">▼</span>}
+                                         </span>
+                                         
+                                         {/* Desktop View */}
                                          {row.participants.total > 0 && (
-                                            <div className="flex flex-col md:flex-row gap-0.5 md:gap-3 text-[8px] md:text-[10px] font-medium text-gray-400 mt-1 uppercase tracking-wide">
+                                            <div className="hidden md:flex flex-row gap-3 text-[10px] font-medium text-gray-400 mt-1 uppercase tracking-wide">
                                                <span className="flex items-center" title="Male Participants">
-                                                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mr-1 hidden md:block"></span>M:{row.participants.male}
+                                                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mr-1"></span>M:{row.participants.male}
                                                </span>
                                                <span className="flex items-center" title="Female Participants">
-                                                  <span className="w-1.5 h-1.5 rounded-full bg-pink-400 mr-1 hidden md:block"></span>F:{row.participants.female}
+                                                  <span className="w-1.5 h-1.5 rounded-full bg-pink-400 mr-1"></span>F:{row.participants.female}
                                                </span>
+                                            </div>
+                                         )}
+
+                                         {/* Mobile Popup */}
+                                         {isAttnPopup && row.participants.total > 0 && (
+                                            <div className="md:hidden absolute top-full mt-1 left-1/2 transform -translate-x-1/2 bg-white border border-blue-200 shadow-xl rounded-lg p-2 z-50 min-w-[80px] animate-in zoom-in-95 duration-100">
+                                                <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-t border-l border-blue-200 transform rotate-45"></div>
+                                                <div className="relative z-10">
+                                                   <div className="flex items-center justify-between text-xs text-gray-600 mb-1 border-b border-gray-100 pb-1 gap-2">
+                                                      <span className="text-blue-500 font-bold">M</span> <span className="font-bold">{row.participants.male}</span>
+                                                   </div>
+                                                   <div className="flex items-center justify-between text-xs text-gray-600 gap-2">
+                                                      <span className="text-pink-500 font-bold">F</span> <span className="font-bold">{row.participants.female}</span>
+                                                   </div>
+                                                </div>
                                             </div>
                                          )}
                                       </div>
                                    </td>
                                    
                                    {/* Accommodation */}
-                                   <td className="p-2 md:p-4 text-center bg-green-50/20 border-r border-gray-100">
-                                      <div className="flex flex-col items-center justify-center">
-                                         <span className="text-sm md:text-2xl font-bold text-green-700">{row.accommodation.total}</span>
+                                   <td 
+                                     className="p-2 md:p-4 text-center bg-green-50/20 border-r border-gray-100 relative cursor-pointer md:cursor-default"
+                                     onClick={() => handleMobileStatClick(stayKey)}
+                                   >
+                                      <div className="flex flex-col items-center justify-center relative">
+                                         <span className="text-sm md:text-2xl font-bold text-green-700 flex items-center gap-1">
+                                            {row.accommodation.total}
+                                            {row.accommodation.total > 0 && <span className="md:hidden text-green-400 text-[8px]">▼</span>}
+                                         </span>
+                                         
+                                         {/* Desktop View */}
                                          {row.accommodation.total > 0 && (
-                                            <div className="flex flex-col md:flex-row gap-0.5 md:gap-3 text-[8px] md:text-[10px] font-medium text-gray-400 mt-1 uppercase tracking-wide">
+                                            <div className="hidden md:flex flex-row gap-3 text-[10px] font-medium text-gray-400 mt-1 uppercase tracking-wide">
                                                <span className="flex items-center" title="Male Accommodation">
-                                                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1 hidden md:block"></span>M:{row.accommodation.male}
+                                                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1"></span>M:{row.accommodation.male}
                                                </span>
                                                <span className="flex items-center" title="Female Accommodation">
-                                                  <span className="w-1.5 h-1.5 rounded-full bg-pink-400 mr-1 hidden md:block"></span>F:{row.accommodation.female}
+                                                  <span className="w-1.5 h-1.5 rounded-full bg-pink-400 mr-1"></span>F:{row.accommodation.female}
                                                </span>
+                                            </div>
+                                         )}
+
+                                          {/* Mobile Popup */}
+                                         {isStayPopup && row.accommodation.total > 0 && (
+                                            <div className="md:hidden absolute top-full mt-1 left-1/2 transform -translate-x-1/2 bg-white border border-green-200 shadow-xl rounded-lg p-2 z-50 min-w-[80px] animate-in zoom-in-95 duration-100">
+                                                <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-t border-l border-green-200 transform rotate-45"></div>
+                                                <div className="relative z-10">
+                                                   <div className="flex items-center justify-between text-xs text-gray-600 mb-1 border-b border-gray-100 pb-1 gap-2">
+                                                      <span className="text-green-600 font-bold">M</span> <span className="font-bold">{row.accommodation.male}</span>
+                                                   </div>
+                                                   <div className="flex items-center justify-between text-xs text-gray-600 gap-2">
+                                                      <span className="text-pink-500 font-bold">F</span> <span className="font-bold">{row.accommodation.female}</span>
+                                                   </div>
+                                                </div>
                                             </div>
                                          )}
                                       </div>
@@ -497,9 +559,15 @@ export const AdminPanel: React.FC = () => {
                       {/* Sticky Participant Column Header */}
                       <th className="p-2 md:p-4 border-b border-gray-200 sticky left-0 z-20 bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] w-32 md:w-auto md:min-w-[200px]">Participant</th>
                       
-                      <th className="p-2 md:p-4 border-b border-gray-200 md:min-w-[150px]">Attendance</th>
+                      <th className="p-2 md:p-4 border-b border-gray-200 md:min-w-[150px]">
+                        <span className="md:hidden">ATTEND</span>
+                        <span className="hidden md:inline">Attendance</span>
+                      </th>
                       <th className="p-2 md:p-4 border-b border-gray-200 md:min-w-[150px]">Guests</th>
-                      <th className="p-2 md:p-4 border-b border-gray-200 md:min-w-[150px]">Stay</th>
+                      <th className="p-2 md:p-4 border-b border-gray-200 md:min-w-[150px]">
+                         <span className="md:hidden">STAY</span>
+                         <span className="hidden md:inline">Stay</span>
+                      </th>
                       <th className="p-2 md:p-4 border-b border-gray-200 md:min-w-[150px]">Food</th>
                       {isAuthenticated && <th className="p-2 md:p-4 border-b border-gray-200 text-right md:min-w-[100px]"></th>}
                     </tr>
