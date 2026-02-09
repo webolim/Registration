@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { 
   Loader2, CheckCircle2, ArrowLeft, ArrowRight, 
   User, Calendar, Users, Home, Utensils, FileText, 
-  Plus, Trash2, MapPin, Phone, AlertCircle, X, Edit3, PartyPopper
+  Plus, Trash2, MapPin, Phone, AlertCircle, X, Edit3, PartyPopper, Lock
 } from 'lucide-react';
 
 // --- Types & Constants ---
@@ -62,6 +62,10 @@ const formatDateForInput = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
+const formatDisplayDate = (date: Date): string => {
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+};
+
 const getDisplayDate = (date: string) => {
   const parts = date.split('(');
   const rawDateStr = parts[0].trim();
@@ -69,6 +73,24 @@ const getDisplayDate = (date: string) => {
   const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
   const dateWithoutYear = rawDateStr.replace(', 2026', '').replace(' 2026', '');
   return `${dayName}, ${dateWithoutYear}`;
+};
+
+// Check if date is in past (IST)
+const isDateInPastIST = (dateStr: string): boolean => {
+  const dateParts = dateStr.split('(')[0].trim(); 
+  const eventDate = new Date(dateParts);
+  
+  // Current IST Date Calculation
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const istOffset = 5.5 * 60 * 60 * 1000; 
+  const istNow = new Date(utc + istOffset);
+  
+  // Reset time to midnight for strict date comparison
+  istNow.setHours(0,0,0,0);
+  eventDate.setHours(0,0,0,0);
+  
+  return eventDate < istNow;
 };
 
 // --- Reusable UI Components ---
@@ -99,6 +121,52 @@ const StyledSelect = (props: React.SelectHTMLAttributes<HTMLSelectElement>) => (
     <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none">
       <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
     </div>
+  </div>
+);
+
+const DateOptionGroup = ({ 
+  options, 
+  selectedDate, 
+  onChange, 
+  name,
+  disabled = false
+}: { 
+  options: Date[], 
+  selectedDate: string, 
+  onChange: (date: string) => void,
+  name: string,
+  disabled?: boolean
+}) => (
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    {options.map((date) => {
+      const value = formatDateForInput(date);
+      const isSelected = selectedDate === value;
+      return (
+        <label 
+          key={value}
+          className={`
+            relative flex items-center p-3 rounded-xl border-2 transition-all
+            ${disabled ? 'opacity-60 cursor-not-allowed bg-gray-50 border-gray-200' : 'cursor-pointer'}
+            ${isSelected 
+              ? 'border-orange-500 bg-orange-50 shadow-sm' 
+              : !disabled && 'border-gray-200 bg-white hover:border-orange-200 hover:bg-orange-50/50'}
+          `}
+        >
+          <input 
+            type="radio" 
+            name={name}
+            value={value}
+            checked={isSelected}
+            onChange={() => !disabled && onChange(value)}
+            disabled={disabled}
+            className="w-4 h-4 text-orange-600 focus:ring-orange-500 border-gray-300 disabled:text-gray-400"
+          />
+          <span className={`ml-3 font-medium ${isSelected ? 'text-orange-900' : 'text-gray-700'}`}>
+            {formatDisplayDate(date)}
+          </span>
+        </label>
+      );
+    })}
   </div>
 );
 
@@ -162,6 +230,16 @@ export default function App() {
     setData(d => ({ ...d, id: uuidv4(), primaryParticipant: { ...d.primaryParticipant, id: uuidv4() } }));
   }, []);
 
+  // --- Synchronization Logic (Moved to Top Level) ---
+  // If accommodation is required, food date is LOCKED to Check-out Date
+  const isLockedToCheckout = Boolean(data.accommodation.required && data.accommodation.departureDate);
+
+  useEffect(() => {
+    if (isLockedToCheckout && data.food.takeawayRequired && data.food.pickupDate !== data.accommodation.departureDate) {
+       setData(d => ({...d, food: {...d.food, pickupDate: d.accommodation.departureDate}}));
+    }
+  }, [isLockedToCheckout, data.food.takeawayRequired, data.accommodation.departureDate]);
+
   // --- Actions ---
 
   const checkMobileAvailability = async (mobileValue: string) => {
@@ -218,43 +296,48 @@ export default function App() {
       return;
     }
 
-    // 3. Accommodation Validation
+    // 3. Guests Validation
+    if (step === 'GUESTS') {
+      const invalidGuest = data.additionalGuests.find(g => !g.fullName.trim() || !g.age || g.age <= 0);
+      if (invalidGuest) {
+        setError("All added guests must have a valid Name and Age.");
+        return;
+      }
+    }
+
+    // 4. Accommodation Validation
     if (step === 'ACCOMMODATION' && data.accommodation.required) {
+      if (data.accommodation.memberIds.length === 0) {
+        setError("Please select at least one person requiring accommodation.");
+        return;
+      }
+      
       if (!data.accommodation.arrivalDate || !data.accommodation.departureDate) {
         setError("Please select both check-in and check-out dates.");
         return;
       }
+      
+      if (new Date(data.accommodation.arrivalDate) >= new Date(data.accommodation.departureDate)) {
+         setError("Check-out date must be after Check-in date.");
+         return;
+      }
+    }
 
-      // Parse selected dates
-      const attendingDates = data.attendingDates.map(parseEventDate).sort((a, b) => a.getTime() - b.getTime());
-      if (attendingDates.length > 0) {
-        const firstEventDate = attendingDates[0];
-        const lastEventDate = attendingDates[attendingDates.length - 1];
-        
-        const arrivalDate = new Date(data.accommodation.arrivalDate);
-        const departureDate = new Date(data.accommodation.departureDate);
-
-        // Reset time components for accurate date-only comparison
-        firstEventDate.setHours(0,0,0,0);
-        lastEventDate.setHours(0,0,0,0);
-        arrivalDate.setHours(0,0,0,0);
-        departureDate.setHours(0,0,0,0);
-
-        if (arrivalDate > departureDate) {
-          setError("Check-out date cannot be before check-in date.");
-          return;
-        }
-
-        // Logic: You shouldn't arrive after the event starts (or at least your first day) 
-        // and shouldn't leave before your last day.
-        if (arrivalDate > firstEventDate) {
-          setError(`Your check-in date (${data.accommodation.arrivalDate}) is after your first attending date. Please arrive on or before ${formatDateForInput(firstEventDate)}.`);
-          return;
-        }
-
-        if (departureDate < lastEventDate) {
-          setError(`Your check-out date (${data.accommodation.departureDate}) is before your last attending date. Please depart on or after ${formatDateForInput(lastEventDate)}.`);
-          return;
+    // 5. Food Validation
+    if (step === 'FOOD' && data.food.takeawayRequired) {
+      if (!data.food.packetCount || data.food.packetCount <= 0) {
+        setError("Please enter a valid number of food packets (minimum 1).");
+        return;
+      }
+      // If accommodation is selected, date is auto-set, otherwise user must pick
+      if (!data.food.pickupDate) {
+        // If we are here, it means auto-set failed or user didn't pick
+        if (data.accommodation.required && data.accommodation.departureDate) {
+           // Should have been set automatically, try setting it now just in case
+           setData(prev => ({...prev, food: {...prev.food, pickupDate: prev.accommodation.departureDate}}));
+        } else {
+           setError("Please select the Date of Requirement.");
+           return;
         }
       }
     }
@@ -317,29 +400,16 @@ export default function App() {
 
   // --- Helper for Date Ranges ---
 
-  const getAllowedDateRange = () => {
-    if (data.attendingDates.length === 0) return { min: undefined, max: undefined };
+  const getAttendanceDateRange = () => {
+    if (data.attendingDates.length === 0) return { first: null, last: null };
 
     const sortedDates = data.attendingDates
       .map(parseEventDate)
       .sort((a, b) => a.getTime() - b.getTime());
 
-    if (sortedDates.length === 0) return { min: undefined, max: undefined };
-
-    const firstDate = new Date(sortedDates[0]);
-    const lastDate = new Date(sortedDates[sortedDates.length - 1]);
-
-    // Minus 1 day from first
-    const minDate = new Date(firstDate);
-    minDate.setDate(minDate.getDate() - 1);
-
-    // Plus 1 day to last
-    const maxDate = new Date(lastDate);
-    maxDate.setDate(maxDate.getDate() + 1);
-
     return {
-      min: formatDateForInput(minDate),
-      max: formatDateForInput(maxDate)
+      first: sortedDates[0],
+      last: sortedDates[sortedDates.length - 1]
     };
   };
 
@@ -455,7 +525,6 @@ export default function App() {
           >
             <option value="Male">Male</option>
             <option value="Female">Female</option>
-            <option value="Other">Other</option>
           </StyledSelect>
         </InputGroup>
 
@@ -486,6 +555,7 @@ export default function App() {
           {dates.map(date => {
             const isSelected = data.attendingDates.includes(date);
             const displayDate = getDisplayDate(date);
+            const isPast = isDateInPastIST(date);
             
             // Extract extra label inside brackets if any
             const parts = date.split('(');
@@ -496,6 +566,7 @@ export default function App() {
               <div 
                 key={date}
                 onClick={() => {
+                  if (isPast) return; // Disable click for past dates
                   if (isSelected) {
                     setData({...data, attendingDates: data.attendingDates.filter(d => d !== date)});
                   } else {
@@ -503,19 +574,33 @@ export default function App() {
                   }
                 }}
                 className={`
-                  cursor-pointer p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-between group
-                  ${isSelected 
-                    ? 'border-orange-500 bg-orange-50 shadow-md' 
-                    : 'border-gray-200 bg-white hover:border-orange-200 hover:bg-orange-50/50'}
+                  relative overflow-hidden
+                  p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-between group
+                  ${isPast 
+                    ? (isSelected 
+                        ? 'border-gray-300 bg-gray-100 cursor-not-allowed opacity-80' 
+                        : 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed')
+                    : (isSelected 
+                        ? 'border-orange-500 bg-orange-50 shadow-md cursor-pointer' 
+                        : 'border-gray-200 bg-white hover:border-orange-200 hover:bg-orange-50/50 cursor-pointer')
+                  }
                 `}
               >
                 <div>
-                  <span className={`block font-bold ${isSelected ? 'text-orange-900' : 'text-gray-700 group-hover:text-gray-900'}`}>
+                  <span className={`block font-bold ${isPast ? 'text-gray-500' : isSelected ? 'text-orange-900' : 'text-gray-700 group-hover:text-gray-900'}`}>
                     {displayDate}
                   </span>
-                  {extra && <span className="text-xs font-semibold text-orange-600 block mt-1">{extra}</span>}
+                  {extra && <span className={`text-xs font-semibold block mt-1 ${isPast ? 'text-gray-400' : 'text-orange-600'}`}>{extra}</span>}
+                  {isPast && isSelected && <span className="text-[10px] uppercase font-bold text-gray-500 mt-1 flex items-center"><Lock className="w-3 h-3 mr-1"/> Past Date</span>}
+                  {isPast && !isSelected && <span className="text-[10px] uppercase font-bold text-gray-400 mt-1">Not Available</span>}
                 </div>
-                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'border-orange-500 bg-orange-500' : 'border-gray-300 group-hover:border-orange-300'}`}>
+                <div className={`
+                  w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors 
+                  ${isPast 
+                     ? (isSelected ? 'border-gray-400 bg-gray-400' : 'border-gray-300 bg-transparent')
+                     : (isSelected ? 'border-orange-500 bg-orange-500' : 'border-gray-300 group-hover:border-orange-300')
+                  }
+                `}>
                    {isSelected && <CheckCircle2 className="w-4 h-4 text-white" />}
                 </div>
               </div>
@@ -533,7 +618,7 @@ export default function App() {
         {renderDateGroup(DATE_GROUPS.CONF.title, DATE_GROUPS.CONF.dates)}
         {renderDateGroup(DATE_GROUPS.POST.title, DATE_GROUPS.POST.dates)}
 
-        <p className="text-xs text-gray-400 mt-4 italic text-center">Select all dates applicable.</p>
+        <p className="text-xs text-gray-400 mt-4 italic text-center">Past dates are disabled for new selection.</p>
       </div>
     );
   };
@@ -618,7 +703,26 @@ export default function App() {
   );
 
   const renderAccommodation = () => {
-    const { min, max } = getAllowedDateRange();
+    const { first, last } = getAttendanceDateRange();
+
+    // Determine Valid Options
+    // Check-in: First Date OR Previous Day
+    const checkInOptions: Date[] = [];
+    if (first) {
+      const prevDay = new Date(first);
+      prevDay.setDate(first.getDate() - 1);
+      checkInOptions.push(prevDay);
+      checkInOptions.push(first);
+    }
+
+    // Check-out: Last Date OR Next Day
+    const checkOutOptions: Date[] = [];
+    if (last) {
+      checkOutOptions.push(last);
+      const nextDay = new Date(last);
+      nextDay.setDate(last.getDate() + 1);
+      checkOutOptions.push(nextDay);
+    }
 
     return (
       <div className="step-enter">
@@ -675,19 +779,36 @@ export default function App() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <InputGroup label="Check-in Date & Time" subLabel="Must be on or before your first event day">
-                  <div className="flex space-x-2">
-                    <StyledInput type="date" min={min} max={max} value={data.accommodation.arrivalDate} onChange={e => setData({...data, accommodation: {...data.accommodation, arrivalDate: e.target.value}})} />
-                    <StyledInput type="time" value={data.accommodation.arrivalTime} onChange={e => setData({...data, accommodation: {...data.accommodation, arrivalTime: e.target.value}})} />
-                  </div>
-              </InputGroup>
-              <InputGroup label="Check-out Date & Time" subLabel="Must be on or after your last event day">
-                  <div className="flex space-x-2">
-                    <StyledInput type="date" min={min} max={max} value={data.accommodation.departureDate} onChange={e => setData({...data, accommodation: {...data.accommodation, departureDate: e.target.value}})} />
-                    <StyledInput type="time" value={data.accommodation.departureTime} onChange={e => setData({...data, accommodation: {...data.accommodation, departureTime: e.target.value}})} />
-                  </div>
-              </InputGroup>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <InputGroup label="Check-in Date" subLabel="First event day or day before">
+                  <DateOptionGroup 
+                    name="arrivalDate"
+                    options={checkInOptions}
+                    selectedDate={data.accommodation.arrivalDate}
+                    onChange={(d) => setData({...data, accommodation: {...data.accommodation, arrivalDate: d}})}
+                  />
+                </InputGroup>
+                <div className="mt-2">
+                   <label className="text-xs font-semibold text-gray-500 mb-1 block">Approx. Arrival Time</label>
+                   <StyledInput type="time" value={data.accommodation.arrivalTime} onChange={e => setData({...data, accommodation: {...data.accommodation, arrivalTime: e.target.value}})} />
+                </div>
+              </div>
+
+              <div>
+                <InputGroup label="Check-out Date" subLabel="Last event day or day after">
+                   <DateOptionGroup 
+                    name="departureDate"
+                    options={checkOutOptions}
+                    selectedDate={data.accommodation.departureDate}
+                    onChange={(d) => setData({...data, accommodation: {...data.accommodation, departureDate: d}})}
+                  />
+                </InputGroup>
+                <div className="mt-2">
+                   <label className="text-xs font-semibold text-gray-500 mb-1 block">Approx. Departure Time</label>
+                   <StyledInput type="time" value={data.accommodation.departureTime} onChange={e => setData({...data, accommodation: {...data.accommodation, departureTime: e.target.value}})} />
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -696,7 +817,15 @@ export default function App() {
   };
 
   const renderFood = () => {
-    const { min, max } = getAllowedDateRange();
+    // Valid Options for Non-Accommodation users: Last Date OR Next Day (same as checkout logic)
+    const { last } = getAttendanceDateRange();
+    const foodDateOptions: Date[] = [];
+    if (last) {
+      foodDateOptions.push(last);
+      const nextDay = new Date(last);
+      nextDay.setDate(last.getDate() + 1);
+      foodDateOptions.push(nextDay);
+    }
 
     return (
       <div className="step-enter">
@@ -729,9 +858,23 @@ export default function App() {
                   onChange={e => setData({...data, food: {...data.food, packetCount: parseInt(e.target.value) || 0}})}
                 />
             </InputGroup>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <InputGroup label="Collection Date" subLabel="Date you will collect food at venue">
-                <StyledInput type="date" min={min} max={max} value={data.food.pickupDate} onChange={e => setData({...data, food: {...data.food, pickupDate: e.target.value}})} />
+              <InputGroup label="Date of Requirement" subLabel={isLockedToCheckout ? "Linked to Check-out Date" : "Select Departure Day"}>
+                 {isLockedToCheckout ? (
+                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl flex items-center text-gray-700">
+                       <Lock className="w-4 h-4 mr-2 text-orange-500" />
+                       <span className="font-bold">{formatDisplayDate(parseEventDate(data.accommodation.departureDate))}</span>
+                       <span className="text-xs text-gray-400 ml-auto uppercase font-bold tracking-wider">Locked</span>
+                    </div>
+                 ) : (
+                    <DateOptionGroup 
+                       name="pickupDate"
+                       options={foodDateOptions}
+                       selectedDate={data.food.pickupDate}
+                       onChange={(d) => setData({...data, food: {...data.food, pickupDate: d}})}
+                    />
+                 )}
               </InputGroup>
               <InputGroup label="Collection Time" subLabel="Approximate time">
                 <StyledInput type="time" value={data.food.pickupTime} onChange={e => setData({...data, food: {...data.food, pickupTime: e.target.value}})} />
