@@ -252,13 +252,16 @@ export const AdminPanel: React.FC = () => {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-               <div className="bg-orange-100 p-2 rounded-lg text-orange-700">
-                 <ShieldCheck className="w-6 h-6" />
-               </div>
+            <div className="flex items-center gap-4">
+               <img 
+                 src="https://raw.githubusercontent.com/webolim/Valmiki-Ramayana-Conference-2026/refs/heads/studio/assets/WEBOLIM_RGBLogo_20250521.gif" 
+                 alt="Webolim Logo" 
+                 className="h-10 md:h-12 w-auto object-contain"
+               />
+               <div className="hidden sm:block h-8 w-px bg-gray-200"></div>
                <div>
-                 <h1 className="text-xl font-bold text-gray-900 tracking-tight leading-none">Admin Portal</h1>
-                 <p className="text-xs text-gray-500 mt-0.5 font-medium">Sri Ramayana Satram 2026</p>
+                 <h1 className="text-lg md:text-xl font-bold text-gray-900 tracking-tight leading-none">2026 Conference Registrations</h1>
+                 <p className="text-xs text-gray-500 mt-0.5 font-medium">Sri Ramayana Satram</p>
                </div>
             </div>
             
