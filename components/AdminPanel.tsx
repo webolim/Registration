@@ -190,12 +190,6 @@ export const AdminPanel: React.FC = () => {
     return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   };
 
-  const formatMobileDate = (dateStr: string) => {
-    const raw = dateStr.split('(')[0].trim();
-    const date = new Date(raw);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
   // Section Definitions
   const SECTIONS = [
     { 
@@ -365,26 +359,21 @@ export const AdminPanel: React.FC = () => {
                     <thead className="bg-gray-800 text-white uppercase tracking-wider">
                       <tr>
                         {/* Sticky Date Column Header */}
-                        <th className="p-2 md:p-4 text-[10px] md:text-xs font-bold border-r border-gray-700 sticky left-0 z-20 bg-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)] w-16 md:w-auto md:min-w-[160px]">
-                           <span className="md:hidden">Date</span>
-                           <span className="hidden md:inline">Event Date</span>
+                        <th className="p-2 md:p-4 text-[9px] md:text-xs font-bold border-r border-gray-700 sticky left-0 z-20 bg-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)] w-auto min-w-[110px] md:min-w-[160px]">
+                           Event Date
                         </th>
                         
-                        <th className="p-2 md:p-4 text-[10px] md:text-xs text-center border-r border-gray-700 w-12 md:w-24 md:min-w-[100px]">
-                           <span className="md:hidden">Reg</span>
-                           <span className="hidden md:inline">Forms</span>
+                        <th className="p-2 md:p-4 text-[9px] md:text-xs text-center border-r border-gray-700 min-w-[50px] md:min-w-[100px]">
+                           Forms
                         </th>
-                        <th className="p-2 md:p-4 text-[10px] md:text-xs text-center border-r border-gray-700 bg-blue-900/40 w-16 md:w-auto md:min-w-[200px]" style={{ width: '25%' }}>
-                           <span className="md:hidden">Attn</span>
-                           <span className="hidden md:inline">Attendance</span>
+                        <th className="p-2 md:p-4 text-[9px] md:text-xs text-center border-r border-gray-700 bg-blue-900/40 min-w-[70px] md:min-w-[200px]" style={{ width: '25%' }}>
+                           Attendance
                         </th>
-                        <th className="p-2 md:p-4 text-[10px] md:text-xs text-center border-r border-gray-700 bg-green-900/40 w-16 md:w-auto md:min-w-[200px]" style={{ width: '25%' }}>
-                           <span className="md:hidden">Stay</span>
-                           <span className="hidden md:inline">Accommodation</span>
+                        <th className="p-2 md:p-4 text-[9px] md:text-xs text-center border-r border-gray-700 bg-green-900/40 min-w-[70px] md:min-w-[200px]" style={{ width: '25%' }}>
+                           Accommodation
                         </th>
-                        <th className="p-2 md:p-4 text-[10px] md:text-xs text-center bg-orange-900/40 w-14 md:w-auto md:min-w-[100px]" style={{ width: '25%' }}>
-                           <span className="md:hidden">Food</span>
-                           <span className="hidden md:inline">Food</span>
+                        <th className="p-2 md:p-4 text-[9px] md:text-xs text-center bg-orange-900/40 min-w-[50px] md:min-w-[100px]" style={{ width: '25%' }}>
+                           Food
                         </th>
                       </tr>
                     </thead>
@@ -393,11 +382,10 @@ export const AdminPanel: React.FC = () => {
                         <React.Fragment key={section.id}>
                           {/* Section Header */}
                           <tr className={`${section.color} border-y`}>
-                             <td colSpan={5} className="p-2 md:p-3 pl-2 md:pl-4 text-[10px] md:text-xs font-bold uppercase tracking-widest">
+                             <td colSpan={5} className="p-2 md:p-3 pl-2 md:pl-4 text-[9px] md:text-xs font-bold uppercase tracking-widest">
                                 <div className="sticky left-0 flex items-center">
                                   <Calendar className="w-3 h-3 mr-1 md:mr-2 opacity-70" /> 
-                                  <span className="md:hidden">{section.title.replace('Days', '')}</span>
-                                  <span className="hidden md:inline">{section.title}</span>
+                                  {section.title}
                                 </div>
                              </td>
                           </tr>
@@ -409,9 +397,8 @@ export const AdminPanel: React.FC = () => {
                              return (
                                 <tr key={row.date} className="hover:bg-gray-50 transition border-b border-gray-100 group">
                                    {/* Sticky Date Cell */}
-                                   <td className="p-2 md:p-4 font-bold text-gray-700 border-r border-gray-100 sticky left-0 z-10 bg-white group-hover:bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                                      <span className="md:hidden whitespace-nowrap">{formatMobileDate(row.originalDate)}</span>
-                                      <span className="hidden md:inline">{formatAdminDate(row.originalDate)}</span>
+                                   <td className="p-2 md:p-4 font-bold text-gray-700 border-r border-gray-100 sticky left-0 z-10 bg-white group-hover:bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-[9px] md:text-sm whitespace-nowrap">
+                                      {formatAdminDate(row.originalDate)}
                                    </td>
                                    
                                    {/* Forms */}
@@ -426,7 +413,7 @@ export const AdminPanel: React.FC = () => {
                                       <div className="flex flex-col items-center justify-center">
                                          <span className="text-sm md:text-2xl font-bold text-blue-700">{row.participants.total}</span>
                                          {row.participants.total > 0 && (
-                                            <div className="flex flex-col md:flex-row gap-0.5 md:gap-3 text-[9px] md:text-[10px] font-medium text-gray-400 mt-1 uppercase tracking-wide">
+                                            <div className="flex flex-col md:flex-row gap-0.5 md:gap-3 text-[8px] md:text-[10px] font-medium text-gray-400 mt-1 uppercase tracking-wide">
                                                <span className="flex items-center" title="Male Participants">
                                                   <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mr-1 hidden md:block"></span>M:{row.participants.male}
                                                </span>
@@ -443,7 +430,7 @@ export const AdminPanel: React.FC = () => {
                                       <div className="flex flex-col items-center justify-center">
                                          <span className="text-sm md:text-2xl font-bold text-green-700">{row.accommodation.total}</span>
                                          {row.accommodation.total > 0 && (
-                                            <div className="flex flex-col md:flex-row gap-0.5 md:gap-3 text-[9px] md:text-[10px] font-medium text-gray-400 mt-1 uppercase tracking-wide">
+                                            <div className="flex flex-col md:flex-row gap-0.5 md:gap-3 text-[8px] md:text-[10px] font-medium text-gray-400 mt-1 uppercase tracking-wide">
                                                <span className="flex items-center" title="Male Accommodation">
                                                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1 hidden md:block"></span>M:{row.accommodation.male}
                                                </span>
@@ -524,21 +511,17 @@ export const AdminPanel: React.FC = () => {
                         <td className="p-2 md:p-4 align-top sticky left-0 z-10 bg-white group-hover:bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] border-r border-gray-100">
                           <div className="font-bold text-gray-900 truncate max-w-[120px] md:max-w-none">{reg.primaryParticipant.fullName}</div>
                           <div className="text-orange-600 font-medium text-[10px] md:text-sm">{reg.primaryParticipant.mobile}</div>
-                          <div className="text-gray-400 text-[9px] md:text-xs md:block hidden">{reg.primaryParticipant.city}</div>
+                          <div className="text-gray-400 text-[9px] md:text-xs">{reg.primaryParticipant.city}</div>
                           <div className="text-gray-400 text-[9px] md:text-xs mt-0.5 md:mt-1">{reg.primaryParticipant.gender.charAt(0)}, {reg.primaryParticipant.age}y</div>
                         </td>
                         
                         <td className="p-2 md:p-4 align-top">
                           <div className="flex flex-wrap gap-1 max-w-[100px] md:max-w-[200px]">
-                            {reg.attendingDates.length > 5 ? (
-                               <span className="text-[10px] md:text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-1 rounded">{reg.attendingDates.length} Days</span>
-                            ) : (
-                                reg.attendingDates.map(d => (
-                                  <span key={d} className="px-1.5 py-0.5 md:px-2 md:py-0.5 bg-blue-50 text-blue-700 text-[9px] md:text-[10px] rounded border border-blue-100 whitespace-nowrap">
-                                    {d.split('(')[0].trim().split(',')[0].replace('March ', 'Mar ').replace('April ', 'Apr ')}
-                                  </span>
-                                ))
-                            )}
+                            {reg.attendingDates.map(d => (
+                              <span key={d} className="px-1.5 py-0.5 md:px-2 md:py-0.5 bg-blue-50 text-blue-700 text-[9px] md:text-[10px] rounded border border-blue-100 whitespace-nowrap">
+                                {d.split('(')[0].trim().split(',')[0].replace('March ', 'Mar ').replace('April ', 'Apr ')}
+                              </span>
+                            ))}
                           </div>
                         </td>
                         <td className="p-2 md:p-4 align-top">
