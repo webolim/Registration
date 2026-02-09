@@ -269,7 +269,6 @@ export const AdminPanel: React.FC = () => {
                <div className="hidden sm:block h-8 w-px bg-gray-200"></div>
                <div>
                  <h1 className="text-lg md:text-xl font-bold text-gray-900 tracking-tight leading-none">2026 Conference Registrations</h1>
-                 <p className="text-xs text-gray-500 mt-0.5 font-medium">Sri Ramayana Satram</p>
                </div>
             </div>
             
