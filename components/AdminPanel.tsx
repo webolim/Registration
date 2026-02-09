@@ -98,7 +98,8 @@ export const AdminPanel: React.FC = () => {
     EVENT_DATES.forEach(d => {
        stats[d] = {
          date: d.split('(')[0].trim(),
-         registration: { male: 0, female: 0, total: 0 },
+         registrationsCount: 0, // Number of forms covering this date
+         participants: { male: 0, female: 0, total: 0 }, // Number of actual people
          accommodation: { male: 0, female: 0, total: 0 },
          foodPackets: 0
        };
@@ -111,10 +112,12 @@ export const AdminPanel: React.FC = () => {
        // 1. Attendance Stats
        reg.attendingDates.forEach(date => {
          if (stats[date]) {
+            stats[date].registrationsCount++; // Increment form count for this date
+
             allParticipants.forEach(p => {
                const gender = (p.gender === 'Male' || p.gender === 'Female') ? p.gender.toLowerCase() : 'male'; // fallback to male for 'other' or handle distinct
-               stats[date].registration[gender]++;
-               stats[date].registration.total++;
+               stats[date].participants[gender]++;
+               stats[date].participants.total++;
             });
          }
        });
@@ -320,12 +323,14 @@ export const AdminPanel: React.FC = () => {
                     <thead className="bg-gray-100 text-gray-600 text-xs uppercase tracking-wider">
                       <tr>
                         <th className="p-3 border-r border-gray-200 font-bold w-48">Event Date</th>
-                        <th className="p-3 border-r border-gray-200 text-center" colSpan={3}>Attendance (Persons)</th>
+                        <th className="p-3 border-r border-gray-200 text-center font-bold bg-gray-200/50">Registrations</th>
+                        <th className="p-3 border-r border-gray-200 text-center" colSpan={3}>Participants (Persons)</th>
                         <th className="p-3 border-r border-gray-200 text-center" colSpan={3}>Accommodation (Persons)</th>
                         <th className="p-3 text-center">Food (Packets)</th>
                       </tr>
                       <tr className="bg-gray-50 border-b border-gray-200 text-gray-500">
                         <th className="p-2 border-r border-gray-200"></th>
+                        <th className="p-2 border-r border-gray-200 text-center text-[10px] font-bold bg-gray-100">Forms</th>
                         <th className="p-2 text-center text-[10px] w-20">Male</th>
                         <th className="p-2 text-center text-[10px] w-20">Female</th>
                         <th className="p-2 text-center text-[10px] w-20 border-r border-gray-200 bg-gray-100 font-bold">Total</th>
@@ -340,9 +345,11 @@ export const AdminPanel: React.FC = () => {
                         <tr key={row.date} className="hover:bg-gray-50 transition group">
                            <td className="p-3 font-medium text-gray-900 border-r border-gray-100 group-hover:border-gray-200">{row.date}</td>
                            
-                           <td className="p-3 text-center text-gray-600 bg-blue-50/10">{row.registration.male}</td>
-                           <td className="p-3 text-center text-gray-600 bg-blue-50/10">{row.registration.female}</td>
-                           <td className="p-3 text-center font-bold text-blue-700 bg-blue-50/50 border-r border-gray-100 group-hover:border-gray-200">{row.registration.total}</td>
+                           <td className="p-3 text-center font-bold text-gray-700 border-r border-gray-100 group-hover:border-gray-200 bg-gray-50/50">{row.registrationsCount}</td>
+
+                           <td className="p-3 text-center text-gray-600 bg-blue-50/10">{row.participants.male}</td>
+                           <td className="p-3 text-center text-gray-600 bg-blue-50/10">{row.participants.female}</td>
+                           <td className="p-3 text-center font-bold text-blue-700 bg-blue-50/50 border-r border-gray-100 group-hover:border-gray-200">{row.participants.total}</td>
                            
                            <td className="p-3 text-center text-gray-600 bg-green-50/10">{row.accommodation.male}</td>
                            <td className="p-3 text-center text-gray-600 bg-green-50/10">{row.accommodation.female}</td>
