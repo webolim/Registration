@@ -1,6 +1,6 @@
 import React from 'react';
 import { CONTACT_EMAIL, CONTACT_PHONE } from '../constants';
-import { Phone, Mail, ArrowLeft } from 'lucide-react';
+import { Phone, Mail, ArrowLeft, ShieldCheck } from 'lucide-react';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
@@ -71,9 +71,17 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               Back to Conference Page
             </a>
           </div>
-          <p className="mt-8 text-xs text-gray-400">&copy; 2026 WEBOLIM. All rights reserved.</p>
+          
+          <div className="mt-8 text-center">
+             <div className="flex items-center justify-center text-xs text-gray-400 gap-2">
+               <span>&copy; 2026 WEBOLIM. All rights reserved.</span>
+               <a href="./admin.html" className="text-gray-300 hover:text-orange-500 transition-colors" title="Admin Access">
+                 <ShieldCheck className="w-3 h-3" />
+               </a>
+             </div>
+          </div>
         </div>
       </footer>
     </div>
   );
-};
+}
