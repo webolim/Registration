@@ -19,8 +19,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             />
             <div className="hidden sm:block h-10 w-px bg-orange-200"></div>
             <div>
-              <h1 className="text-sm md:text-xl font-bold text-gray-900 leading-tight">Sri Ramayana Satram & Conference 2026</h1>
-              <p className="text-orange-600 text-xs font-bold tracking-wide uppercase">Participant Registration</p>
+              <h1 className="text-sm md:text-xl font-bold text-gray-900 leading-tight">Sri Rama Navami Utsavam - 2026</h1>
+              <p className="text-orange-600 text-xs font-bold tracking-wide uppercase mt-1">Sri Ramayana Satram</p>
+              <p className="text-orange-600 text-xs font-bold tracking-wide uppercase">Srimad Valmiki Ramayana Conference - 3</p>
             </div>
           </div>
 
