@@ -610,6 +610,8 @@ export default function App() {
       </div>
     );
 
+    const hasPastDates = EVENT_DATES.some(d => isDateInPastIST(d));
+
     return (
       <div className="step-enter">
         <SectionTitle title="Event Attendance" subtitle="Select all the dates you plan to be present at the Satram." />
@@ -618,7 +620,9 @@ export default function App() {
         {renderDateGroup(DATE_GROUPS.CONF.title, DATE_GROUPS.CONF.dates)}
         {renderDateGroup(DATE_GROUPS.POST.title, DATE_GROUPS.POST.dates)}
 
-        <p className="text-xs text-gray-400 mt-4 italic text-center">Past dates are disabled for new selection.</p>
+        {hasPastDates && new Date() >= new Date('2026-03-29') && (
+          <p className="text-xs text-gray-400 mt-4 italic text-center">Past dates are disabled for new selection.</p>
+        )}
       </div>
     );
   };
